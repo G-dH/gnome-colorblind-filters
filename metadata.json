@@ -1,0 +1,17 @@
+{
+  "description": "Color filters for colorblind users.",
+  "gettext-domain": "colorblind-filters",
+  "name": "Colorblind Filters",
+  "settings-schema": "org.gnome.shell.extensions.colorblind-filters",
+  "shell-version": [
+    "3.36",
+    "3.38",
+    "40",
+    "41",
+    "42",
+    "43"
+  ],
+  "url": "https://github.com/G-dH/gnome-colorblind-filters",
+  "uuid": "colorblind-filters@G-dH.github.com-dev",
+  "version": 1
+}

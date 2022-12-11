@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="vertical-workspaces">
+    <schema id="org.gnome.shell.extensions.colorblind-filters" path="/org/gnome/shell/extensions/colorblind-filters/">
+        <key type="b" name="filter-active">
+            <default>false</default>
+        </key>
+        <key type="i" name="filter-index">
+            <default>1</default>
+        </key>
+        <key type="i" name="filter-strength">
+            <default>100</default>
+        </key>
+    </schema>
+</schemalist>
