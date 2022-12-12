@@ -64,7 +64,7 @@ const MenuButton = GObject.registerClass ({
         this.menu.addMenuItem(switchOff);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
 
-        const correctionsExpander = new PopupMenu.PopupSubMenuMenuItem(_('Color Blindness Filters'));
+        const correctionsExpander = new PopupMenu.PopupSubMenuMenuItem(_('Color Blindness'));
         this.menu.addMenuItem(correctionsExpander);
 
         const strengthSlider = new Slider.Slider(0);
@@ -137,7 +137,6 @@ const MenuButton = GObject.registerClass ({
         brgItem._filter = 9;
         brgItem._effect = Shaders.ColorMixerBRGEffect;
         othersExpander.menu.addMenuItem(brgItem);
-        this.menu.addMenuItem(othersExpander);
 
         const lightnessInversionItem = new PopupMenu.PopupMenuItem(_('Lightness Inversion'), false);
         lightnessInversionItem.connect('activate', this._switchFilter.bind(this, lightnessInversionItem));
@@ -238,6 +237,7 @@ const MenuButton = GObject.registerClass ({
         this._activeIndex = settings.get_int('filter-index');
         this._filterStrength = settings.get_int('filter-strength') / 100;
         this._strengthSlider.value = this._filterStrength;
+        this._switch.state = settings.get_boolean('filter-active');
     }
 
     vfunc_event(event) {
