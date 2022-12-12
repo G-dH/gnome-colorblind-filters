@@ -14,30 +14,15 @@ const ExtensionUtils = imports.misc.extensionUtils;
 
 var   InvertLightnessEffect = GObject.registerClass(
 class InvertLightnessEffect extends Clutter.ShaderEffect {
-    _init(mode) {
+    _init(mode = 0) {
         super._init();
         this._mode = mode;
 
-        this.set_shader_source(ShaderLib.getInversion(this._mode, this._simulation, this._strength));
+        this.set_shader_source(ShaderLib.getInversion(this._mode));
     }
 
     vfunc_get_static_shader_source() {
-        return ShaderLib.getInversion(0);
-    }
-
-    vfunc_paint_target(node, paint_context) {
-        this.set_uniform_value('tex', 0);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
-    }
-});
-
-var   InvertLightnessShiftEffect = GObject.registerClass(
-class InvertLightnessShiftEffect extends Clutter.ShaderEffect {
-    vfunc_get_static_shader_source() {
-        return ShaderLib.getInversion(1);
+        return ShaderLib.getInversion(this._mode);
     }
 
     vfunc_paint_target(node, paint_context) {
