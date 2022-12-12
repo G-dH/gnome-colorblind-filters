@@ -1,5 +1,5 @@
 {
-  "description": "Color filters for colorblind users.",
+  "description": "Color filters that should help colorblind users and developers.",
   "gettext-domain": "colorblind-filters",
   "name": "Colorblind Filters",
   "settings-schema": "org.gnome.shell.extensions.colorblind-filters",
