@@ -170,9 +170,9 @@ var ShaderLib = class {
 
                     // deuteranopia / deuteranomaly corrections (tries to mimic Android, GdH)
                     #elif ( COLORBLIND_MODE == 1 )
-                        correction.r = error.r * -0.7; // + error.g * 0.0 + error.b * 0.0;
-                        correction.g = error.r *  0.5 + error.g; // * 1.0 + error.b * 0.0;
-                        correction.b = error.r * -0.3 + error.b; // + error.g * 0.0;
+                        correction.r = error.r * -0.7 + error.g * 0.0 + error.b * 0.0;
+                        correction.g = error.r *  0.5 + error.g * 1.0 + error.b * 0.0;
+                        correction.b = error.r * -0.3 + error.g * 0.0 + error.b * 1.0;
 
                     // tritanopia / tritanomaly corrections (GdH)
                     #elif ( COLORBLIND_MODE == 2 )
@@ -197,9 +197,9 @@ var ShaderLib = class {
             void main() {
                 vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
                 #if (MIX_MODE == 1)
-                    c = vec4(c.g, c.b, c.r, c.a);
-                #elif (MIX_MODE == 2)
                     c = vec4(c.b, c.r, c.g, c.a);
+                #elif (MIX_MODE == 2)
+                    c = vec4(c.g, c.b, c.r, c.a);
                 #endif
                 cogl_color_out = c;
             }
