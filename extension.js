@@ -8,11 +8,9 @@
  */
 'use strict';
 
-const St = imports.gi.St;
-const Clutter = imports.gi.Clutter;
+const { Gio, GLib, GObject, St, Clutter } = imports.gi;
+
 const Main = imports.ui.main;
-const Gio = imports.gi.Gio;
-const GObject = imports.gi.GObject;
 const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 const Slider = imports.ui.slider;
@@ -37,6 +35,9 @@ function enable() {
 }
 
 function disable() {
+    if (menu._labelTimeoutId)
+        GLib.source_remove(menu._labelTimeoutId);
+
     menu.destroy();
     menu = null;
 }
@@ -177,9 +178,6 @@ const MenuButton = GObject.registerClass ({
             this._activeEffect = activeItem._effect;
             this._removeOrnament();
             this._setOrnament();
-            const words = activeItem.label.text.split(' ');
-            this._panelLabel.text = words[0][0] + words[1][0];
-            this._panelBin.set_style('spacing: 3px;');
         } else {
             // activeItem is strength slider
             this._filterStrength = activeItem.value;
@@ -273,6 +271,11 @@ const MenuButton = GObject.registerClass ({
             this._switchFilter(item);
             this._actionTime = Date.now();
 
+            const words = item.label.text.split(' ');
+            this._panelLabel.text = words[0][0] + words[1][0];
+            this._panelBin.set_style('spacing: 3px;');
+            this._resetLabelTimeout();
+
             return Clutter.EVENT_STOP;
         }
 
@@ -302,5 +305,22 @@ const MenuButton = GObject.registerClass ({
 
         this._panelBin.add_child(icon);
         this._icon = icon;
+    }
+
+    _resetLabelTimeout() {
+        if (this._labelTimeoutId) {
+            GLib.source_remove(this._labelTimeoutId);
+        }
+
+        this._labelTimeoutId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT,
+            2,
+            () => {
+                this._panelLabel.text = '';
+                this._panelBin.set_style('spacing: 0;');
+                this._labelTimeoutId = 0;
+                return GLib.SOURCE_REMOVE;
+            }
+        );
     }
 });
