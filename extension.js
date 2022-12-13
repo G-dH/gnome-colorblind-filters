@@ -49,7 +49,17 @@ const MenuButton = GObject.registerClass ({
 
         const schema = Me.metadata['settings-schema'];
         this._settings = ExtensionUtils.getSettings(schema);
+        this._actionTime = Date.now();
+
+        const bin = new St.BoxLayout();
+        const panelLabel = new St.Label({ y_align: Clutter.ActorAlign.CENTER });
+
+        bin.add_child(panelLabel);
+        this.add_child(bin);
         
+        this._panelLabel = panelLabel;
+        this._panelBin = bin;
+
         this._menuItems = [];
 
         const switchOff = new PopupMenu.PopupSwitchMenuItem('', false);
@@ -81,17 +91,17 @@ const MenuButton = GObject.registerClass ({
         const protanItem = new PopupMenu.PopupMenuItem(_('Protanopia Correction'), false);
         protanItem.connect('activate', this._switchFilter.bind(this, protanItem));
         this._menuItems.push(protanItem);
-        protanItem._filter = 0;
+        protanItem._filterIndex = 0;
         protanItem._effect = Shaders.DaltonismEffect;
         const deuterItem = new PopupMenu.PopupMenuItem(_('Deuteranopia Correction'), false);
         deuterItem.connect('activate', this._switchFilter.bind(this, deuterItem));
         this._menuItems.push(deuterItem);
-        deuterItem._filter = 1;
+        deuterItem._filterIndex = 1;
         deuterItem._effect = Shaders.DaltonismEffect;
         const tritanItem = new PopupMenu.PopupMenuItem(_('Tritanopia Correction'), false);
         tritanItem.connect('activate', this._switchFilter.bind(this, tritanItem));
         this._menuItems.push(tritanItem);
-        tritanItem._filter = 2;
+        tritanItem._filterIndex = 2;
         tritanItem._effect = Shaders.DaltonismEffect;
 
         correctionsExpander.menu.addMenuItem(protanItem);
@@ -102,17 +112,17 @@ const MenuButton = GObject.registerClass ({
         const protanSimulItem = new PopupMenu.PopupMenuItem(_('Protanopia Simulation'), false);
         protanSimulItem.connect('activate', this._switchFilter.bind(this, protanSimulItem));
         this._menuItems.push(protanSimulItem);
-        protanSimulItem._filter = 3;
+        protanSimulItem._filterIndex = 3;
         protanSimulItem._effect = Shaders.DaltonismEffect;
         const deuterSimulItem = new PopupMenu.PopupMenuItem(_('Deuteranopia Simulation'), false);
         deuterSimulItem.connect('activate', this._switchFilter.bind(this, deuterSimulItem));
         this._menuItems.push(deuterSimulItem);
-        deuterSimulItem._filter = 4;
+        deuterSimulItem._filterIndex = 4;
         deuterSimulItem._effect = Shaders.DaltonismEffect;
         const tritanSimulItem = new PopupMenu.PopupMenuItem(_('Tritanopia Simulation'), false);
         tritanSimulItem.connect('activate', this._switchFilter.bind(this, tritanSimulItem));
         this._menuItems.push(tritanSimulItem);
-        tritanSimulItem._filter = 5;
+        tritanSimulItem._filterIndex = 5;
         tritanSimulItem._effect = Shaders.DaltonismEffect;
 
         correctionsExpander.menu.addMenuItem(protanSimulItem);
@@ -127,28 +137,28 @@ const MenuButton = GObject.registerClass ({
         const gbrItem = new PopupMenu.PopupMenuItem(_('Channel Mixer - GBR'), false);
         gbrItem.connect('activate', this._switchFilter.bind(this, gbrItem));
         this._menuItems.push(gbrItem);
-        gbrItem._filter = 8;
+        gbrItem._filterIndex = 6;
         gbrItem._effect = Shaders.ColorMixerGBREffect;
         othersExpander.menu.addMenuItem(gbrItem);
 
         const brgItem = new PopupMenu.PopupMenuItem(_('Channel Mixer - BRG'), false);
         brgItem.connect('activate', this._switchFilter.bind(this, brgItem));
         this._menuItems.push(brgItem);
-        brgItem._filter = 9;
+        brgItem._filterIndex = 7;
         brgItem._effect = Shaders.ColorMixerBRGEffect;
         othersExpander.menu.addMenuItem(brgItem);
 
         const lightnessInversionItem = new PopupMenu.PopupMenuItem(_('Lightness Inversion'), false);
         lightnessInversionItem.connect('activate', this._switchFilter.bind(this, lightnessInversionItem));
         this._menuItems.push(lightnessInversionItem);
-        lightnessInversionItem._filter = 6;
+        lightnessInversionItem._filterIndex = 8;
         lightnessInversionItem._effect = Shaders.InvertLightnessEffect;
         othersExpander.menu.addMenuItem(lightnessInversionItem);
 
         const colorInversionItem = new PopupMenu.PopupMenuItem(_('Color Inversion'), false);
         colorInversionItem.connect('activate', this._switchFilter.bind(this, colorInversionItem));
         this._menuItems.push(colorInversionItem);
-        colorInversionItem._filter = 7;
+        colorInversionItem._filterIndex = 9;
         colorInversionItem._effect = Shaders.ColorInversionEffect;
         othersExpander.menu.addMenuItem(colorInversionItem);
 
@@ -162,13 +172,19 @@ const MenuButton = GObject.registerClass ({
 
     _switchFilter(activeItem) {
         if (activeItem.value === undefined) {
-            this._activeIndex = activeItem._filter;
+            // active item is filter
+            this._activeIndex = activeItem._filterIndex;
             this._activeEffect = activeItem._effect;
             this._removeOrnament();
             this._setOrnament();
+            const words = activeItem.label.text.split(' ');
+            this._panelLabel.text = words[0][0] + words[1][0];
+            this._panelBin.set_style('spacing: 3px;');
         } else {
+            // activeItem is strength slider
             this._filterStrength = activeItem.value;
         }
+
         this._setShaderEffect();
     }
 
@@ -180,7 +196,7 @@ const MenuButton = GObject.registerClass ({
 
     _setOrnament() {
         for (const item of this._menuItems) {
-            if (item._filter === this._activeIndex) {
+            if (item._filterIndex === this._activeIndex) {
                 item.setOrnament(true);
                 this._activeLabel.text = item.label.text;
                 this._activeEffect = item._effect;
@@ -241,30 +257,50 @@ const MenuButton = GObject.registerClass ({
     }
 
     vfunc_event(event) {
-        if (!this.menu || event.type() !== Clutter.EventType.BUTTON_PRESS) {
+        if (event.type() === Clutter.EventType.BUTTON_RELEASE)
             return Clutter.EVENT_PROPAGATE;
+
+        if (this._switch.state && event.type() === Clutter.EventType.SCROLL && (Date.now() - this._actionTime) > 200) {
+            const direction = event.get_scroll_direction();
+
+            if (direction === Clutter.ScrollDirection.SMOOTH) {
+                return Clutter.EVENT_STOP;
+            }
+
+            const step = direction === Clutter.ScrollDirection.UP ? 2 : 1; // 2 means -1 -> index %3
+            const index = (this._activeIndex + step) % 3;
+            const item = this._menuItems[index];
+            this._switchFilter(item);
+            this._actionTime = Date.now();
+
+            return Clutter.EVENT_STOP;
         }
-        if (event.get_button() === Clutter.BUTTON_PRIMARY || event.get_button() === Clutter.BUTTON_MIDDLE) {
+
+        if (event.type() === Clutter.EventType.BUTTON_PRESS && (event.get_button() === Clutter.BUTTON_PRIMARY || event.get_button() === Clutter.BUTTON_MIDDLE)) {
             this._switch.state = !this._switch.state;
             this._setShaderEffect();
             this._setPanelIcon();
+            return Clutter.EVENT_STOP;
         }
-        else if (event.get_button() === Clutter.BUTTON_SECONDARY) {
+        else if (event.type() === Clutter.EventType.TOUCH_BEGIN || (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === Clutter.BUTTON_SECONDARY)) {
             this.menu.toggle();
+            return Clutter.EVENT_STOP;
         }
+
         return Clutter.EVENT_PROPAGATE;
     }
 
     _setPanelIcon() {
         if (this._icon) {
-            this.remove_child(this._icon);
+            this._panelBin.remove_child(this._icon);
             this._icon.destroy();
             this._icon = null;
         }
 
         const gicon = Gio.icon_new_for_string(`${Me.path}/icons/eye-${this._switch.state ? '' : 'disabled-'}symbolic.svg`);
         const icon = new St.Icon({ gicon, icon_size: 20 });
-        this.add_child(icon);
+
+        this._panelBin.add_child(icon);
         this._icon = icon;
     }
 });
