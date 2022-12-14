@@ -47,10 +47,15 @@ const MenuButton = GObject.registerClass ({
     GTypeName: 'CBMenuButton',}, class MenuButton extends PanelMenu.Button {
     _init() {
         super._init(0.5, 'ColorblindMenu', false);
-
         const schema = Me.metadata['settings-schema'];
         this._settings = ExtensionUtils.getSettings(schema);
+        this._getEffects();
+
         this._actionTime = Date.now();
+        this._activeItem = null;
+        this._activeData = null;
+        this._filterStrength = 1;
+        this._menuItems = [];
 
         const bin = new St.BoxLayout();
         const panelLabel = new St.Label({ y_align: Clutter.ActorAlign.CENTER });
@@ -70,7 +75,6 @@ const MenuButton = GObject.registerClass ({
         this._switch = switchOff._switch;
         this._activeLabel = switchOff.label;
 
-        this._menuItems = []
 
         const strengthSlider = new Slider.Slider(0);
         const sliderMenuItem = new PopupMenu.PopupBaseMenuItem();
@@ -81,94 +85,96 @@ const MenuButton = GObject.registerClass ({
         this._strengthMenuItem = sliderMenuItem;
         this._strengthSlider = strengthSlider;
 
+        const correctionsExpander = new PopupMenu.PopupSubMenuMenuItem(_('Color Blindness - Corrections'));
+        this._correctionsExpander = correctionsExpander;
+
         const protanItem = new PopupMenu.PopupMenuItem(_('Protanopia Correction'), false);
         protanItem.connect('activate', this._switchFilter.bind(this, protanItem));
+        protanItem._effect = this.Effects.ProtanCorrection;
         this._menuItems.push(protanItem);
-        protanItem._filterIndex = 0;
 
         const protanTurboItem = new PopupMenu.PopupMenuItem(_('Protanopia High Contrast'), false);
         protanTurboItem.connect('activate', this._switchFilter.bind(this, protanTurboItem));
+        protanTurboItem._effect = this.Effects.ProtanCorrectionHighContrast;
         this._menuItems.push(protanTurboItem);
-        protanTurboItem._filterIndex = 1;
 
         const deuterItem = new PopupMenu.PopupMenuItem(_('Deuteranopia Correction'), false);
         deuterItem.connect('activate', this._switchFilter.bind(this, deuterItem));
         this._menuItems.push(deuterItem);
-        deuterItem._filterIndex = 2;
+        deuterItem._effect = this.Effects.DeuterCorrection;
 
         const deuterTurboItem = new PopupMenu.PopupMenuItem(_('Deuteranopia High Contrast'), false);
         deuterTurboItem.connect('activate', this._switchFilter.bind(this, deuterTurboItem));
+        deuterTurboItem._effect = this.Effects.DeuterCorrectionHighContrast;
         this._menuItems.push(deuterTurboItem);
-        deuterTurboItem._filterIndex = 3;
 
         const tritanItem = new PopupMenu.PopupMenuItem(_('Tritanopia Correction'), false);
         tritanItem.connect('activate', this._switchFilter.bind(this, tritanItem));
+        tritanItem._effect = this.Effects.TritanCorrection;
         this._menuItems.push(tritanItem);
-        tritanItem._filterIndex = 4;
 
 
-        const simulationsExpander = new PopupMenu.PopupSubMenuMenuItem(_('Color Blindness Simulations'));
+        const simulationsExpander = new PopupMenu.PopupSubMenuMenuItem(_('Color Blindness - Simulations'));
 
         const protanSimulItem = new PopupMenu.PopupMenuItem(_('Protanopia Simulation'), false);
         protanSimulItem.connect('activate', this._switchFilter.bind(this, protanSimulItem));
+        protanSimulItem._effect = this.Effects.ProtanSimulation;
         this._menuItems.push(protanSimulItem);
-        protanSimulItem._filterIndex = 5;
 
         const deuterSimulItem = new PopupMenu.PopupMenuItem(_('Deuteranopia Simulation'), false);
         deuterSimulItem.connect('activate', this._switchFilter.bind(this, deuterSimulItem));
+        deuterSimulItem._effect = this.Effects.DeuterSimulation;
         this._menuItems.push(deuterSimulItem);
-        deuterSimulItem._filterIndex = 6;
 
         const tritanSimulItem = new PopupMenu.PopupMenuItem(_('Tritanopia Simulation'), false);
         tritanSimulItem.connect('activate', this._switchFilter.bind(this, tritanSimulItem));
+        tritanSimulItem._effect = this.Effects.TritanSimulation;
         this._menuItems.push(tritanSimulItem);
-        tritanSimulItem._filterIndex = 7;
 
         const otherExpander = new PopupMenu.PopupSubMenuMenuItem(_('Other Effects'));
 
         const gbrItem = new PopupMenu.PopupMenuItem(_('Channel Mixer - GBR'), false);
         gbrItem.connect('activate', this._switchFilter.bind(this, gbrItem));
+        gbrItem._effect = this.Effects.ColorMixerGBR;
         this._menuItems.push(gbrItem);
-        gbrItem._filterIndex = 8;
-        gbrItem._effect = Shaders.ColorMixerEffect;
-        gbrItem._properties = { mode: 1 };
 
         const brgItem = new PopupMenu.PopupMenuItem(_('Channel Mixer - BRG'), false);
         brgItem.connect('activate', this._switchFilter.bind(this, brgItem));
+        brgItem._effect = this.Effects.ColorMixerBRG;
         this._menuItems.push(brgItem);
-        brgItem._filterIndex = 9;
-        brgItem._effect = Shaders.ColorMixerEffect;
-        brgItem._properties = { mode: 2 };
+
+        const desaturateItem = new PopupMenu.PopupMenuItem(_('Desaturation'), false);
+        desaturateItem.connect('activate', this._switchFilter.bind(this, desaturateItem));
+        desaturateItem._effect = this.Effects.Desaturation;
+        this._menuItems.push(desaturateItem);
 
         const lightnessInversionItem = new PopupMenu.PopupMenuItem(_('Lightness Inversion'), false);
         lightnessInversionItem.connect('activate', this._switchFilter.bind(this, lightnessInversionItem));
+        lightnessInversionItem._effect = this.Effects.LigtnessInversion;
         this._menuItems.push(lightnessInversionItem);
-        lightnessInversionItem._filterIndex = 10;
-        lightnessInversionItem._effect = Shaders.InversionEffect;
-        lightnessInversionItem._properties = { mode: 0 };
 
         const colorInversionItem = new PopupMenu.PopupMenuItem(_('Color Inversion'), false);
         colorInversionItem.connect('activate', this._switchFilter.bind(this, colorInversionItem));
         this._menuItems.push(colorInversionItem);
-        colorInversionItem._filterIndex = 11;
-        colorInversionItem._effect = Shaders.InversionEffect;
-        colorInversionItem._properties = { mode: 2 };
+        colorInversionItem._effect = this.Effects.ColorInversion;
 
         this.menu.addMenuItem(switchOff);
         this.menu.addMenuItem(sliderMenuItem);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
-        this.menu.addMenuItem(protanItem);
-        this.menu.addMenuItem(protanTurboItem);
-        this.menu.addMenuItem(deuterItem);
-        this.menu.addMenuItem(deuterTurboItem);
-        this.menu.addMenuItem(tritanItem);
+        correctionsExpander.menu.addMenuItem(protanItem);
+        correctionsExpander.menu.addMenuItem(protanTurboItem);
+        correctionsExpander.menu.addMenuItem(deuterItem);
+        correctionsExpander.menu.addMenuItem(deuterTurboItem);
+        correctionsExpander.menu.addMenuItem(tritanItem);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+        this.menu.addMenuItem(correctionsExpander);
         this.menu.addMenuItem(simulationsExpander);
         simulationsExpander.menu.addMenuItem(protanSimulItem);
         simulationsExpander.menu.addMenuItem(deuterSimulItem);
         simulationsExpander.menu.addMenuItem(tritanSimulItem);
         this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
         this.menu.addMenuItem(otherExpander);
+        otherExpander.menu.addMenuItem(desaturateItem);
         otherExpander.menu.addMenuItem(gbrItem);
         otherExpander.menu.addMenuItem(brgItem);
         otherExpander.menu.addMenuItem(lightnessInversionItem);
@@ -183,8 +189,8 @@ const MenuButton = GObject.registerClass ({
     _switchFilter(activeItem) {
         if (activeItem.value === undefined) {
             // active item is filter
-            this._activeIndex = activeItem._filterIndex;
-            this._activeEffect = activeItem._effect;
+            this._activeItem = activeItem;
+            this._activeData = activeItem._effect;
             this._setOrnament();
         } else {
             // activeItem is strength slider
@@ -196,45 +202,41 @@ const MenuButton = GObject.registerClass ({
 
     _setOrnament() {
         for (const item of this._menuItems) {
-            if (item._filterIndex === this._activeIndex) {
-                item.setOrnament(true);
-                this._activeLabel.text = item.label.text;
-                this._activeEffect = item._effect;
-                if (this._activeIndex > 7) {
-                    this._strengthMenuItem.visible = false;
-                } else {
-                    this._strengthMenuItem.visible = true;
-                }
-            } else {
-                item.setOrnament(false);
-            }
+            item.setOrnament(false);
         }
+
+        const item = this._activeItem;
+        const slider = this._strengthMenuItem;
+        item.setOrnament(true);
+
+        if (item._effect.sliderEnabled) {
+            slider.visible = true;
+        } else {
+            slider.visible = false;
+        }
+        this._activeLabel.text = item.label.text;
+
     }
 
     _setShaderEffect() {
         const name = 'colorblind';
-
         this._saveSettings();
-        this._removeEffect(name);
-
         this._setPanelIcon();
         this._setOrnament();
+
+        this._removeEffect(name);
 
         if (!this._switch.state) {
             return;
         }
 
-        const filterIndex = this._activeIndex;
-        const strength = this._filterStrength;
-
-        let effect;
-        if (filterIndex < 8) {
-            effect = new Shaders.DaltonismEffect(filterIndex, strength);
-        } else {
-            const properties = this._menuItems[this._activeIndex]._properties;
-            effect = new this._activeEffect(properties);
+        const effectData = this._activeData;
+        const properties = effectData.properties;
+        if (properties.factor !== undefined) {
+            properties.factor = this._filterStrength;
         }
 
+        const effect = new effectData.effect(properties);
         this._addEffect(name, effect);
     }
 
@@ -255,23 +257,34 @@ const MenuButton = GObject.registerClass ({
     _saveSettings() {
         const settings = this._settings;
         settings.set_boolean('filter-active', this._switch.state);
-        settings.set_int('filter-index', this._activeIndex);
+        settings.set_string('filter-name', this._activeData.name);
         settings.set_int('filter-strength', Math.round(this._filterStrength * 100));
     }
 
     _loadSettings() {
         const settings = this._settings;
-        this._activeIndex = settings.get_int('filter-index');
+        const effectName = settings.get_string('filter-name');
+        const item = this._getItemByName(effectName);
+        this._activeItem = item ? item : this._getItemByName('DeuterCorrection');
+        this._activeData = item._effect;
         this._filterStrength = settings.get_int('filter-strength') / 100;
         this._strengthSlider.value = this._filterStrength;
         this._switch.state = settings.get_boolean('filter-active');
+    }
+
+    _getItemByName(name) {
+        for (const item of this._menuItems) {
+            if (item._effect.name === name) {
+                return item;
+            }
+        }
     }
 
     vfunc_event(event) {
         if (event.type() === Clutter.EventType.BUTTON_RELEASE)
             return Clutter.EVENT_PROPAGATE;
 
-        // scrolling over panel btn switches between all cb correction filters
+        // scrolling over panel btn switches between all cb correction filters except inversions
         if (this._switch.state && event.type() === Clutter.EventType.SCROLL && (Date.now() - this._actionTime) > 200) {
             const direction = event.get_scroll_direction();
 
@@ -279,8 +292,8 @@ const MenuButton = GObject.registerClass ({
                 return Clutter.EVENT_STOP;
             }
 
-            const step = direction === Clutter.ScrollDirection.UP ? 11 : 1;
-            const index = (this._activeIndex + step) % 12;
+            const step = direction === Clutter.ScrollDirection.UP ? 10 : 1;
+            const index = (this._menuItems.indexOf(this._activeItem) + step) % 11;
             const item = this._menuItems[index];
             this._switchFilter(item);
             this._actionTime = Date.now();
@@ -290,47 +303,32 @@ const MenuButton = GObject.registerClass ({
         }
 
         if (event.type() === Clutter.EventType.BUTTON_PRESS && (event.get_button() === Clutter.BUTTON_PRIMARY || event.get_button() === Clutter.BUTTON_MIDDLE)) {
-
-            if (this._activeIndex > 4) {
+            // primary button toggles active filter on/off
+            if (event.get_button() === Clutter.BUTTON_PRIMARY) {
                 this._switch.state = !this._switch.state;
                 this._setShaderEffect();
                 return Clutter.EVENT_STOP;
-            }
-            // left clicking on panel btn switches between normal correction, high contrast and off state for given cb type
-            let index = this._switch.state ? this._activeIndex : -1;
-            switch (index) {
-                case -1: index = this._activeIndex;
-                        break;
-                case 0: index = 1;
-                        break;
-                case 1: index = -1;
-                        break;
-                case 2: index = 3;
-                        break;
-                case 3: index = -2;
-                        break;
-                case 4: index = -3;
-                        break;
-            }
-            if (index < 0) {
-                this._switch.state = false;
-                if (index == -1) {
-                    this._activeIndex = 0;
-                } else if (index == -2) {
-                    this._activeIndex = 2;
-                }
-                this._setPanelIcon();
-            } else {
-                this._activeIndex = index;
-                this._switch.state = true;
-            }
 
-            this._setPanelLabel();
-            this._setShaderEffect();
-            return Clutter.EVENT_STOP;
+            } else if (this._switch.state && event.get_button() === Clutter.BUTTON_MIDDLE) {
+                // middle clicking on panel btn switches between normal correction, high contrast and off state for the active cb type
+                let index = this._menuItems.indexOf(this._activeItem);
+                const effectName = this._activeData.name;
+                if (effectName == 'ProtanCorrection' || effectName == 'DeuterCorrection') {
+                    index += 1;
+                } else if (effectName == 'ProtanCorrectionHighContrast' || effectName == 'DeuterCorrectionHighContrast') {
+                    index -= 1;
+                }
+
+                this._activeItem = this._menuItems[index];
+
+                this._setPanelLabel();
+                this._setShaderEffect();
+                return Clutter.EVENT_STOP;
+            }
 
         } else if (event.type() === Clutter.EventType.TOUCH_BEGIN || (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === Clutter.BUTTON_SECONDARY)) {
             this.menu.toggle();
+            this._correctionsExpander.setSubmenuShown(true);
             return Clutter.EVENT_STOP;
         }
 
@@ -339,15 +337,13 @@ const MenuButton = GObject.registerClass ({
 
     _setPanelLabel(item) {
         if (!item) {
-            item = this._menuItems[this._activeIndex];
+            item = this._activeItem;
         }
 
         if (this._switch.state) {
-            const words = item.label.text.split(' ');
-            this._panelLabel.text = words[0][0] + words[1][0];
+            this._panelLabel.text = this._activeData.shortName;
             this._panelBin.set_style('spacing: 3px;');
             this._resetLabelTimeout();
-            //this._icon.visible = false;
         } else {
             this._panelBin.set_style('spacing: 0;');
             this._panelLabel.text = '';
@@ -384,5 +380,149 @@ const MenuButton = GObject.registerClass ({
                 return GLib.SOURCE_REMOVE;
             }
         );
+    }
+
+    _getEffects() {
+        this.Effects = {
+            ProtanCorrection: {
+                name: 'ProtanCorrection',
+                shortName: 'PC',
+                properties: {
+                    mode: 0,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            ProtanCorrectionHighContrast: {
+                name: 'ProtanCorrectionHighContrast',
+                shortName: 'PH',
+                properties: {
+                    mode: 1,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            DeuterCorrection: {
+                name: 'DeuterCorrection',
+                shortName: 'DC',
+                properties: {
+                    mode: 2,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            DeuterCorrectionHighContrast: {
+                name: 'DeuterCorrectionHighContrast',
+                shortName: 'DH',
+                properties: {
+                    mode: 3,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            TritanCorrection: {
+                name: 'TritanCorrection',
+                shortName: 'TC',
+                properties: {
+                    mode: 4,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            ProtanSimulation: {
+                name: 'ProtanSimulation',
+                shortName: 'PS',
+                properties: {
+                    mode: 5,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            DeuterSimulation: {
+                name: 'DeuterSimulation',
+                shortName: 'DS',
+                properties: {
+                    mode: 6,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            TritanSimulation: {
+                name: 'TritanSimulation',
+                shortName: 'TS',
+                properties: {
+                    mode: 7,
+                    factor: 1
+                },
+                effect: Shaders.DaltonismEffect,
+                sliderEnabled: true
+            },
+
+            ColorMixerGBR: {
+                name: 'ColorMixerGBR',
+                shortName: 'GBR',
+                properties: {
+                    mode: 0,
+                    factor: 1,
+                },
+                effect: Shaders.ColorMixerEffect,
+                sliderEnabled: true
+            },
+
+            ColorMixerBRG: {
+                name: 'ColorMixerBRG',
+                shortName: 'BRG',
+                properties: {
+                    mode: 1,
+                    factor: 1
+                },
+                effect: Shaders.ColorMixerEffect,
+                sliderEnabled: true
+            },
+
+            Desaturation: {
+                name: 'Desaturation',
+                shortName: 'D',
+                properties: {
+                    factor: 1
+                },
+                effect: Shaders.DesaturateEffect,
+                sliderEnabled: true
+            },
+
+            LigtnessInversion: {
+                name: 'LightnessInversion',
+                shortName: 'LI',
+                properties: {
+                    mode: 0
+                },
+                effect: Shaders.InversionEffect,
+                sliderEnabled: false
+            },
+
+            ColorInversion: {
+                name: 'ColorInversion',
+                shortName: 'CI',
+                properties: {
+                    mode: 2
+                },
+                effect: Shaders.InversionEffect,
+                sliderEnabled: false
+            },
+        }
     }
 });

@@ -4,8 +4,8 @@
         <key type="b" name="filter-active">
             <default>false</default>
         </key>
-        <key type="i" name="filter-index">
-            <default>1</default>
+        <key type="s" name="filter-name">
+            <default>'DeuterCorrection'</default>
         </key>
         <key type="i" name="filter-strength">
             <default>100</default>

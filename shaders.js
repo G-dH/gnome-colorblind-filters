@@ -12,6 +12,13 @@
 const { GObject, Clutter } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 
+var   DesaturateEffect = GObject.registerClass(
+class DesaturateEffect extends Clutter.DesaturateEffect {
+    _init(properties) {
+        super._init(properties);
+    }
+});
+
 var   InversionEffect = GObject.registerClass(
 class InversionEffect extends Clutter.ShaderEffect {
     _init(properties) {
@@ -39,10 +46,11 @@ var   ColorMixerEffect = GObject.registerClass(
 class ColorMixerEffect extends Clutter.ShaderEffect {
     _init(properties) {
         super._init();
-        // 1 - GRB, 2 - BRG
+        // 0 - GRB, 1 - BRG
         this._mode = properties.mode;
+        this._strength = properties.factor;
 
-        this._source = ShaderLib.getChannelMix(this._mode);
+        this._source = ShaderLib.getChannelMix(this._mode, this._strength);
         this.set_shader_source(this._source);
     }
 
@@ -61,10 +69,10 @@ class ColorMixerEffect extends Clutter.ShaderEffect {
 
 var   DaltonismEffect = GObject.registerClass(
 class DaltonismEffect extends Clutter.ShaderEffect {
-    _init(mode, strength) {
+    _init(properties) {
         super._init();
-        this._mode = mode;
-        this._strength = strength;
+        this._mode = properties.mode;
+        this._strength = properties.factor;
 
         this._source = ShaderLib.getDaltonism(this._mode, this._strength)
         this.set_shader_source(this._source);
@@ -82,7 +90,6 @@ class DaltonismEffect extends Clutter.ShaderEffect {
             super.vfunc_paint_target(node, paint_context);
     }
 });
-
 
 var ShaderLib = class {
     constructor() {
@@ -155,7 +162,7 @@ var ShaderLib = class {
                     // deuteranopia / deuteranomaly corrections (tries to mimic Android, GdH)
                     #elif ( COLORBLIND_MODE == 2 )
                         correction.r = error.r * -0.7 + error.g * 0.0 + error.b * 0.0;
-                        correction.g = error.r *  0.2 + error.g * 1.0 + error.b * 0.0;
+                        correction.g = error.r *  0.5 + error.g * 1.0 + error.b * 0.0;
                         correction.b = error.r * -0.3 + error.g * 0.0 + error.b * 1.0;
 
                     // deuteranopia / deuteranomaly high contrast R-G corrections
@@ -180,17 +187,20 @@ var ShaderLib = class {
         `;
     }
 
-    static getChannelMix(mode) {
+    static getChannelMix(mode, strength) {
         return `
             uniform sampler2D tex;
             #define MIX_MODE ${mode}
+            #define STRENGTH ${strength}
             void main() {
                 vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
-                #if (MIX_MODE == 1)
-                    c = vec4(c.b, c.r, c.g, c.a);
-                #elif (MIX_MODE == 2)
-                    c = vec4(c.g, c.b, c.r, c.a);
+                vec4 m;
+                #if (MIX_MODE == 0)
+                    m = vec4(c.b, c.r, c.g, c.a);
+                #elif (MIX_MODE == 1)
+                    m = vec4(c.g, c.b, c.r, c.a);
                 #endif
+                c = m * STRENGTH + c * (1 - STRENGTH);
                 cogl_color_out = c;
             }
         `;
@@ -230,4 +240,4 @@ var ShaderLib = class {
             }
         `;
     }
-};
+}
