@@ -12,17 +12,18 @@
 const { GObject, Clutter } = imports.gi;
 const ExtensionUtils = imports.misc.extensionUtils;
 
-var   InvertLightnessEffect = GObject.registerClass(
-class InvertLightnessEffect extends Clutter.ShaderEffect {
-    _init(mode = 0) {
+var   InversionEffect = GObject.registerClass(
+class InversionEffect extends Clutter.ShaderEffect {
+    _init(properties) {
         super._init();
-        this._mode = mode;
+        this._mode = properties.mode;
 
-        this.set_shader_source(ShaderLib.getInversion(this._mode));
+        this._source = ShaderLib.getInversion(this._mode);
+        this.set_shader_source(this._source);
     }
 
     vfunc_get_static_shader_source() {
-        return ShaderLib.getInversion(this._mode);
+        return this._source;
     }
 
     vfunc_paint_target(node, paint_context) {
@@ -34,40 +35,19 @@ class InvertLightnessEffect extends Clutter.ShaderEffect {
     }
 });
 
-var   ColorInversionEffect = GObject.registerClass(
-class ColorInversionEffect extends Clutter.ShaderEffect {
+var   ColorMixerEffect = GObject.registerClass(
+class ColorMixerEffect extends Clutter.ShaderEffect {
+    _init(properties) {
+        super._init();
+        // 1 - GRB, 2 - BRG
+        this._mode = properties.mode;
+
+        this._source = ShaderLib.getChannelMix(this._mode);
+        this.set_shader_source(this._source);
+    }
+
     vfunc_get_static_shader_source() {
-        return ShaderLib.getInversion(2);
-    }
-
-    vfunc_paint_target(node, paint_context) {
-        this.set_uniform_value('tex', 0);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
-    }
-});
-
-var   ColorMixerGBREffect = GObject.registerClass(
-class ColorMixerGbrEffect extends Clutter.ShaderEffect {
-    vfunc_get_static_shader_source() {
-        return ShaderLib.getChannelMix(1);
-    }
-
-    vfunc_paint_target(node, paint_context) {
-        this.set_uniform_value('tex', 0);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
-    }
-});
-
-var   ColorMixerBRGEffect = GObject.registerClass(
-class ColorMixerBrgEffect extends Clutter.ShaderEffect {
-    vfunc_get_static_shader_source() {
-        return ShaderLib.getChannelMix(2);
+        return this._source;
     }
 
     vfunc_paint_target(node, paint_context) {
@@ -83,15 +63,15 @@ var   DaltonismEffect = GObject.registerClass(
 class DaltonismEffect extends Clutter.ShaderEffect {
     _init(mode, strength) {
         super._init();
-        this._mode = mode % 3;
-        this._simulation = mode > 2 ? 1 : 0;
+        this._mode = mode;
         this._strength = strength;
 
-        this.set_shader_source(ShaderLib.getDaltonism(this._mode, this._simulation, this._strength));
+        this._source = ShaderLib.getDaltonism(this._mode, this._strength)
+        this.set_shader_source(this._source);
     }
 
     vfunc_get_static_shader_source() {
-        return ShaderLib.getDaltonism(this._mode, this._simulation, this._strength);
+        return this._source;
     }
 
     vfunc_paint_target(node, paint_context) {
@@ -108,11 +88,10 @@ var ShaderLib = class {
     constructor() {
     }
 
-    static getDaltonism(mode = 1, simulation = 1, strength = 1) {
+    static getDaltonism(mode, strength) {
         return `
             uniform sampler2D tex;
             #define COLORBLIND_MODE ${mode}
-            #define SIMULATE ${simulation}
             #define STRENGTH ${strength}
             void main() {
                 vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
@@ -123,17 +102,17 @@ var ShaderLib = class {
                 float S = (0.0299566f * c.r) + (0.184309f * c.g) + (1.46709f * c.b);
 
                 // Remove invisible colors
-                #if ( COLORBLIND_MODE == 0) // Protanopia - reds are greatly reduced
+                #if ( COLORBLIND_MODE == 0 || COLORBLIND_MODE == 1 || COLORBLIND_MODE == 5 ) // Protanopia - reds are greatly reduced
                     float l = 0.0f * L + 2.02344f * M + -2.52581f * S;
                     float m = 0.0f * L + 1.0f * M + 0.0f * S;
                     float s = 0.0f * L + 0.0f * M + 1.0f * S;
                 #endif
-                #if ( COLORBLIND_MODE == 1) // Deuteranopia - greens are greatly reduced
+                #if ( COLORBLIND_MODE == 2 || COLORBLIND_MODE == 3 || COLORBLIND_MODE == 6) // Deuteranopia - greens are greatly reduced
                     float l = 1.0f * L + 0.0f * M + 0.0f * S;
                     float m = 0.494207f * L + 0.0f * M + 1.24827f * S;
                     float s = 0.0f * L + 0.0f * M + 1.0f * S;
                 #endif
-                #if ( COLORBLIND_MODE == 2) // Tritanopia - blues are greatly reduced (1 of 10 000)
+                #if ( COLORBLIND_MODE == 4 || COLORBLIND_MODE == 7) // Tritanopia - blues are greatly reduced (1 of 10 000)
                     float l = 1.0f * L + 0.0f * M + 0.0f * S;
                     float m = 0.0f * L + 1.0f * M + 0.0f * S;
                     // GdH - trinatopia vector calculated by me, all public sources were off
@@ -151,15 +130,14 @@ var ShaderLib = class {
                 error.a = 1;
 
                 // The error is what they see
-                #if (SIMULATE == 1)
+                #if (COLORBLIND_MODE > 4)
                     error.a = c.a;
                     cogl_color_out = error.rgba;
                     return;
-                #endif
-                #if (SIMULATE == 0)
+                #else
                     // Isolate invisible colors to color vision deficiency (calculate error matrix)
                     error = (c - error);
-                    
+
                     // Shift colors
                     vec4 correction;
                     // protanopia / protanomaly corrections (kwin effect values)
@@ -168,14 +146,26 @@ var ShaderLib = class {
                         correction.g = error.r * 0.55833 + error.g * 0.44267 + error.b * 0.00000;
                         correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
 
-                    // deuteranopia / deuteranomaly corrections (tries to mimic Android, GdH)
+                    // protanopia / protanomaly high contrast G-R corrections
                     #elif ( COLORBLIND_MODE == 1 )
+                        correction.r = error.r * 2.56667 + error.g * 0.43333 + error.b * 0.00000;
+                        correction.g = error.r * 1.55833 + error.g * 0.44267 + error.b * 0.00000;
+                        correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
+
+                    // deuteranopia / deuteranomaly corrections (tries to mimic Android, GdH)
+                    #elif ( COLORBLIND_MODE == 2 )
                         correction.r = error.r * -0.7 + error.g * 0.0 + error.b * 0.0;
-                        correction.g = error.r *  0.5 + error.g * 1.0 + error.b * 0.0;
+                        correction.g = error.r *  0.2 + error.g * 1.0 + error.b * 0.0;
                         correction.b = error.r * -0.3 + error.g * 0.0 + error.b * 1.0;
 
+                    // deuteranopia / deuteranomaly high contrast R-G corrections
+                    #elif ( COLORBLIND_MODE == 3 )
+                        correction.r = error.r * -1.5 + error.g * 1.5 + error.b * 0.0;
+                        correction.g = error.r * -1.5 + error.g * 1.5 + error.b * 0.0;
+                        correction.b = error.r * 1.5 + error.g * 0.0 + error.b * 0.0;
+
                     // tritanopia / tritanomaly corrections (GdH)
-                    #elif ( COLORBLIND_MODE == 2 )
+                    #elif ( COLORBLIND_MODE == 4 )
                         correction.r = error.r * 0.3 + error.g * 0.5 + error.b * 0.4;
                         correction.g = error.r * 0.5 + error.g * 0.7 + error.b * 0.3;
                         correction.b = error.r * 0.0 + error.g * 0.0 + error.b * 1.0;
@@ -223,9 +213,9 @@ var ShaderLib = class {
                     float white_bias = INVERSION_MODE * c.a * .02;
                     float m = 1.0 + white_bias;
                     float shift = white_bias + c.a - min(c.r, min(c.g, c.b)) - max(c.r, max(c.g, c.b));
-                    c = vec4(  ((shift + c.r) / m), 
-                               ((shift + c.g) / m), 
-                               ((shift + c.b) / m), 
+                    c = vec4(  ((shift + c.r) / m),
+                               ((shift + c.g) / m),
+                               ((shift + c.b) / m),
                                c.a);
 
                 #elif (INVERSION_MODE == 2)
