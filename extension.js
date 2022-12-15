@@ -191,7 +191,6 @@ const MenuButton = GObject.registerClass ({
             // active item is filter
             this._activeItem = activeItem;
             this._activeData = activeItem._effect;
-            this._setOrnament();
         } else {
             // activeItem is strength slider
             this._filterStrength = activeItem.value;
@@ -311,15 +310,28 @@ const MenuButton = GObject.registerClass ({
 
             } else if (this._switch.state && event.get_button() === Clutter.BUTTON_MIDDLE) {
                 // middle clicking on panel btn switches between normal correction, high contrast and off state for the active cb type
-                let index = this._menuItems.indexOf(this._activeItem);
+                let item;
                 const effectName = this._activeData.name;
-                if (effectName == 'ProtanCorrection' || effectName == 'DeuterCorrection') {
-                    index += 1;
-                } else if (effectName == 'ProtanCorrectionHighContrast' || effectName == 'DeuterCorrectionHighContrast') {
-                    index -= 1;
+
+                switch (effectName) {
+                    case 'ProtanCorrection':
+                        item = this._getItemByName('ProtanCorrectionHighContrast');
+                        break;
+                    case 'ProtanCorrectionHighContrast':
+                        item = this._getItemByName('ProtanCorrection');
+                        break;
+                    case 'DeuterCorrection':
+                        item = this._getItemByName('DeuterCorrectionHighContrast');
+                        break;
+                    case 'DeuterCorrectionHighContrast':
+                        item = this._getItemByName('DeuterCorrection');
+                        break;
                 }
 
-                this._activeItem = this._menuItems[index];
+                if (item) {
+                    this._activeItem = item;
+                    this._activeData = item._effect;
+                }
 
                 this._setPanelLabel();
                 this._setShaderEffect();
