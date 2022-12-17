@@ -1,0 +1,87 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR GdH
+# This file is distributed under the same license as the colorblind-filters package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: colorblind-filters\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-12-17 16:40+0100\n"
+"PO-Revision-Date: 2022-12-17 17:08+0100\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Language: cs\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n>=2 && n<=4 ? 1 : 2);\n"
+"X-Generator: Poedit 3.0.1\n"
+
+#: extension.js:82
+msgid "Strength:"
+msgstr "Intenzita:"
+
+#: extension.js:88
+msgid "Color Blindness - Corrections"
+msgstr "Barvoslepost - Korekce"
+
+#: extension.js:91
+msgid "Protanopia Correction"
+msgstr "Protanopie - korekce"
+
+#: extension.js:96
+msgid "Protanopia High Contrast"
+msgstr "Protanopie - vysoký kontrast"
+
+#: extension.js:101
+msgid "Deuteranopia Correction"
+msgstr "Deuteranopie - korekce"
+
+#: extension.js:106
+msgid "Deuteranopia High Contrast"
+msgstr "Deuteranopie - vysoký kontrast"
+
+#: extension.js:111
+msgid "Tritanopia Correction"
+msgstr "Tritanopie - korekce"
+
+#: extension.js:117
+msgid "Color Blindness - Simulations"
+msgstr "Barvoslepost - Simulace"
+
+#: extension.js:119
+msgid "Protanopia Simulation"
+msgstr "Protanopie - simulace"
+
+#: extension.js:124
+msgid "Deuteranopia Simulation"
+msgstr "Deuteranopie - simulace"
+
+#: extension.js:129
+msgid "Tritanopia Simulation"
+msgstr "Tritanopie - simulace"
+
+#: extension.js:134
+msgid "Other Effects"
+msgstr "Ostatní efekty"
+
+#: extension.js:136
+msgid "Channel Mixer - GBR"
+msgstr "Prohození kanálů - GBR"
+
+#: extension.js:141
+msgid "Channel Mixer - BRG"
+msgstr "Prohození kanálů - BRG"
+
+#: extension.js:146
+msgid "Desaturation"
+msgstr "Desaturace"
+
+#: extension.js:151
+msgid "Lightness Inversion"
+msgstr "Inverze jasu"
+
+#: extension.js:156
+msgid "Color Inversion"
+msgstr "Inverze barev"
