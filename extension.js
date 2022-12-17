@@ -27,6 +27,7 @@ let menu;
 
 
 function init() {
+    ExtensionUtils.initTranslations();
 }
 
 function enable() {
