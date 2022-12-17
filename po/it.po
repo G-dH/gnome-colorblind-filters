@@ -1,0 +1,85 @@
+# ITALIAN TRANSLATION FOR GNOME-COLORBLIND-FILTERS.
+# Copyright (C) YEAR GdH
+# This file is distributed under the same license as the colorblind-filters package.
+# ALBANO BATTISTELLA <ALBANO_BATTISTELLA@HOTMAIL.COM>, 2023.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: colorblind-filters\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2022-12-17 16:40+0100\n"
+"PO-Revision-Date: 202-12-17 17:50+0100\n"
+"Last-Translator: ALbano Battistella <albano_battistella@hotmail.com>\n"
+"Language-Team: Italian <LL@li.org>\n"
+"Language: it\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: extension.js:82
+msgid "Strength:"
+msgstr "Intensità:"
+
+#: extension.js:88
+msgid "Color Blindness - Corrections"
+msgstr "Correzioni - Daltonismo"
+
+#: extension.js:91
+msgid "Protanopia Correction"
+msgstr "Correzione Protanopia"
+
+#: extension.js:96
+msgid "Protanopia High Contrast"
+msgstr "Protanopia alto contrasto"
+
+#: extension.js:101
+msgid "Deuteranopia Correction"
+msgstr "Correzione Deuteranopia"
+
+#: extension.js:106
+msgid "Deuteranopia High Contrast"
+msgstr "Deuteranopia ad alto contrasto"
+
+#: extension.js:111
+msgid "Tritanopia Correction"
+msgstr "Correzione Tritanopia"
+
+#: extension.js:117
+msgid "Color Blindness - Simulations"
+msgstr "Simulazioni - Daltonismo"
+
+#: extension.js:119
+msgid "Protanopia Simulation"
+msgstr "Simulazione Protanopia"
+
+#: extension.js:124
+msgid "Deuteranopia Simulation"
+msgstr "Simulazione Deuteranopia"
+
+#: extension.js:129
+msgid "Tritanopia Simulation"
+msgstr "Simulazione Tritanopia"
+
+#: extension.js:134
+msgid "Other Effects"
+msgstr "Altri effetti"
+
+#: extension.js:136
+msgid "Channel Mixer - GBR"
+msgstr "Mixer canale - GBR"
+
+#: extension.js:141
+msgid "Channel Mixer - BRG"
+msgstr "Mixer canale - BRG"
+
+#: extension.js:146
+msgid "Desaturation"
+msgstr "Desaturazione"
+
+#: extension.js:151
+msgid "Lightness Inversion"
+msgstr "Inversione luminosità"
+
+#: extension.js:156
+msgid "Color Inversion"
+msgstr "Inversione colore"
