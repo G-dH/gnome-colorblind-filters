@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: colorblind-filters\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-12-17 16:40+0100\n"
-"PO-Revision-Date: 2022-12-17 18:23+0100\n"
+"PO-Revision-Date: 2022-12-22 19:03+0100\n"
 "Last-Translator: \n"
 "Language-Team: \n"
 "Language: de\n"
@@ -20,7 +20,7 @@ msgstr ""
 
 #: extension.js:82
 msgid "Strength:"
-msgstr ""
+msgstr "Stärke:"
 
 #: extension.js:88
 msgid "Color Blindness - Corrections"
