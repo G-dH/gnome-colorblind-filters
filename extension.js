@@ -36,9 +36,6 @@ function enable() {
 }
 
 function disable() {
-    if (menu._labelTimeoutId)
-        GLib.source_remove(menu._labelTimeoutId);
-
     menu.destroy();
     menu = null;
 }
@@ -76,7 +73,6 @@ const MenuButton = GObject.registerClass ({
         });
         this._switch = switchOff._switch;
         this._activeLabel = switchOff.label;
-
 
         const strengthSlider = new Slider.Slider(0);
         const sliderMenuItem = new PopupMenu.PopupBaseMenuItem();
@@ -190,6 +186,10 @@ const MenuButton = GObject.registerClass ({
             this._removeEffect();
             this._activeEffect = null;
             this._clearEffects();
+
+            if (this._labelTimeoutId) {
+                GLib.source_remove(this._labelTimeoutId);
+            }
             if (this._delayedSaveId) {
                 GLib.source_remove(this._delayedSaveId);
                 this._delayedSaveId = 0;
