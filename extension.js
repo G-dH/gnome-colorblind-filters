@@ -50,9 +50,10 @@ const MenuButton = GObject.registerClass ({
         super._init(0.5, 'ColorblindMenu', false);
         const schema = Me.metadata['settings-schema'];
         this._settings = ExtensionUtils.getSettings(schema);
+        this._filterName = 'colorblind';
         this._getEffects();
 
-        this._actionTime = Date.now();
+        this._actionTime = 0;
         this._activeItem = null;
         this._activeData = null;
         this._filterStrength = 1;
@@ -71,7 +72,7 @@ const MenuButton = GObject.registerClass ({
 
         const switchOff = new PopupMenu.PopupSwitchMenuItem('', false);
         switchOff.connect('toggled', () => {
-            this._setShaderEffect();
+            this._switchToggled();
         });
         this._switch = switchOff._switch;
         this._activeLabel = switchOff.label;
@@ -185,19 +186,53 @@ const MenuButton = GObject.registerClass ({
         this._setShaderEffect();
 
         strengthSlider.connect('notify::value', this._switchFilter.bind(this, strengthSlider));
+        this.connect('destroy', ()=> {
+            this._removeEffect();
+            this._activeEffect = null;
+            this._clearEffects();
+            if (this._delayedSaveId) {
+                GLib.source_remove(this._delayedSaveId);
+                this._delayedSaveId = 0;
+            }
+            this._settings = null;
+        });
+    }
+
+    _switchToggled() {
+        if (this._switch.state) {
+            if (this._activeEffect) {
+                this._addEffect(this._activeEffect);
+            } else {
+                this._setShaderEffect();
+            }
+        } else {
+            this._removeEffect();
+        }
+        this._setPanelIcon();
+        this._saveSettings();
     }
 
     _switchFilter(activeItem) {
+        this._saveSettings();
+        this._setPanelIcon();
+        this._setOrnament();
+
         if (activeItem.value === undefined) {
             // active item is filter
+            const sameShader = activeItem._effect.effect == this._activeData.effect;
             this._activeItem = activeItem;
             this._activeData = activeItem._effect;
+            if (sameShader) {
+                this._updateEffect();
+            } else {
+                this._setShaderEffect();
+            }
         } else {
             // activeItem is strength slider
-            this._filterStrength = activeItem.value;
+            // for some reason 0 and 1 don't update the shader
+            this._filterStrength = Math.clamp(0.001, activeItem.value, 0.999);
+            this._updateEffect();
         }
-
-        this._setShaderEffect();
     }
 
     _setOrnament() {
@@ -218,47 +253,72 @@ const MenuButton = GObject.registerClass ({
 
     }
 
-    _setShaderEffect() {
-        const name = 'colorblind';
-        this._saveSettings();
-        this._setPanelIcon();
-        this._setOrnament();
+    _updateEffect() {
+        this._updateExtension();
+        const properties = this._getProperties();
+        this._activeEffect.updateEffect(properties);
+    }
 
-        this._removeEffect(name);
-
-        if (!this._switch.state) {
-            return;
-        }
-
+    _getProperties() {
         const effectData = this._activeData;
         const properties = effectData.properties;
         if (properties.factor !== undefined) {
             properties.factor = this._filterStrength;
         }
-
-        const effect = new effectData.effect(properties);
-        this._addEffect(name, effect);
+        return properties;
     }
 
-    _addEffect(name, effect) {
-        if (Main.uiGroup.get_effect(name)) {
-            Main.uiGroup.remove_effect_by_name(name);
-        }
-
-        Main.uiGroup.add_effect_with_name(name, effect);
+    _updateExtension() {
+        this._setPanelIcon();
+        this._setOrnament();
     }
 
-    _removeEffect(name) {
-        if (Main.uiGroup.get_effect(name)) {
-            Main.uiGroup.remove_effect_by_name(name);
+    _setShaderEffect() {
+        this._removeEffect();
+        this._updateExtension();
+
+        if (!this._switch.state) {
+            return;
         }
+
+        const properties = this._getProperties();
+
+        const effectData = this._activeData;
+        const effect = effectData.effect(properties);
+        this._addEffect(effect);
+    }
+
+    _addEffect(effect) {
+        Main.uiGroup.add_effect_with_name(this._filterName, effect);
+        this._activeEffect = effect;
+    }
+
+    _removeEffect() {
+        Main.uiGroup.remove_effect_by_name(this._filterName);
     }
 
     _saveSettings() {
-        const settings = this._settings;
-        settings.set_boolean('filter-active', this._switch.state);
-        settings.set_string('filter-name', this._activeData.name);
-        settings.set_int('filter-strength', Math.round(this._filterStrength * 100));
+        if (this._delayedSaveId) {
+            return;
+        }
+
+        this._delayedSaveId = GLib.timeout_add(
+            GLib.PRIORITY_DEFAULT,
+            200,
+            () => {
+                const settings = this._settings;
+                settings.set_boolean('filter-active', this._switch.state);
+                settings.set_string('filter-name', this._activeData.name);
+                settings.set_int('filter-strength', Math.round(this._filterStrength * 100));
+                if (this._switch.state) {
+                    // force re-adding effect updates the the whole screen immediately
+                    this._activeEffect.set_enabled(false);
+                    this._activeEffect.set_enabled(true);
+                }
+                this._delayedSaveId = 0;
+                return GLib.SOURCE_REMOVE;
+            }
+        );
     }
 
     _loadSettings() {
@@ -268,6 +328,7 @@ const MenuButton = GObject.registerClass ({
         this._activeItem = item ? item : this._getItemByName('DeuterCorrection');
         this._activeData = item._effect;
         this._filterStrength = settings.get_int('filter-strength') / 100;
+        this._filterStrength = Math.clamp(0.01, this._filterStrength, 0.99);
         this._strengthSlider.value = this._filterStrength;
         this._switch.state = settings.get_boolean('filter-active');
     }
@@ -296,7 +357,6 @@ const MenuButton = GObject.registerClass ({
             const index = (this._menuItems.indexOf(this._activeItem) + step) % 11;
             const item = this._menuItems[index];
             this._switchFilter(item);
-            this._actionTime = Date.now();
             this._setPanelLabel(item);
 
             return Clutter.EVENT_STOP;
@@ -306,7 +366,8 @@ const MenuButton = GObject.registerClass ({
             // primary button toggles active filter on/off
             if (event.get_button() === Clutter.BUTTON_PRIMARY) {
                 this._switch.state = !this._switch.state;
-                this._setShaderEffect();
+                //this._setShaderEffect();
+                this._switchToggled();
                 return Clutter.EVENT_STOP;
 
             } else if (this._switch.state && event.get_button() === Clutter.BUTTON_MIDDLE) {
@@ -330,12 +391,10 @@ const MenuButton = GObject.registerClass ({
                 }
 
                 if (item) {
-                    this._activeItem = item;
-                    this._activeData = item._effect;
+                    this._switchFilter(item);
                 }
 
                 this._setPanelLabel();
-                this._setShaderEffect();
                 return Clutter.EVENT_STOP;
             }
 
@@ -395,6 +454,53 @@ const MenuButton = GObject.registerClass ({
         );
     }
 
+    _getDaltonismEffect(properties) {
+        if (!this._daltonismEffect) {
+            this._daltonismEffect = new Shaders.DaltonismEffect(properties);
+        } else {
+            this._daltonismEffect.updateEffect(properties);
+        }
+
+        return this._daltonismEffect;
+    }
+
+    _getChannelMixerEffect(properties) {
+        if (!this._channelMixerEffect) {
+            this._channelMixerEffect = new Shaders.ColorMixerEffect(properties);
+        } else {
+            this._channelMixerEffect.updateEffect(properties);
+        }
+
+        return this._channelMixerEffect;
+    }
+
+    _getDesaturateEffect(properties) {
+        if (!this._desaturateEffect) {
+            this._desaturateEffect = new Shaders.DesaturateEffect(properties);
+        } else {
+            this._desaturateEffect.updateEffect(properties);
+        }
+
+        return this._desaturateEffect;
+    }
+
+    _getInversionEffect(properties) {
+        if (!this._inversionEffect) {
+            this._inversionEffect = new Shaders.InversionEffect(properties);
+        } else {
+            this._inversionEffect.updateEffect(properties);
+        }
+
+        return this._inversionEffect;
+    }
+
+    _clearEffects() {
+        this._daltonismEffect = null;
+        this._channelMixerEffect = null;
+        this._desaturateEffect = null;
+        this._inversionEffect = null;
+    }
+
     _getEffects() {
         this.Effects = {
             ProtanCorrection: {
@@ -404,7 +510,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 0,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -415,7 +521,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 1,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -426,7 +532,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 2,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -437,7 +543,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 3,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -448,7 +554,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 4,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -459,7 +565,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 5,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -470,7 +576,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 6,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -481,7 +587,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 7,
                     factor: 1
                 },
-                effect: Shaders.DaltonismEffect,
+                effect: this._getDaltonismEffect,
                 sliderEnabled: true
             },
 
@@ -492,7 +598,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 0,
                     factor: 1,
                 },
-                effect: Shaders.ColorMixerEffect,
+                effect: this._getChannelMixerEffect,
                 sliderEnabled: true
             },
 
@@ -503,7 +609,7 @@ const MenuButton = GObject.registerClass ({
                     mode: 1,
                     factor: 1
                 },
-                effect: Shaders.ColorMixerEffect,
+                effect: this._getChannelMixerEffect,
                 sliderEnabled: true
             },
 
@@ -513,7 +619,7 @@ const MenuButton = GObject.registerClass ({
                 properties: {
                     factor: 1
                 },
-                effect: Shaders.DesaturateEffect,
+                effect: this._getDesaturateEffect,
                 sliderEnabled: true
             },
 
@@ -523,7 +629,7 @@ const MenuButton = GObject.registerClass ({
                 properties: {
                     mode: 0
                 },
-                effect: Shaders.InversionEffect,
+                effect: this._getInversionEffect,
                 sliderEnabled: false
             },
 
@@ -533,7 +639,7 @@ const MenuButton = GObject.registerClass ({
                 properties: {
                     mode: 2
                 },
-                effect: Shaders.InversionEffect,
+                effect: this._getInversionEffect,
                 sliderEnabled: false
             },
         }
