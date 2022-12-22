@@ -19,7 +19,7 @@ msgstr ""
 
 #: extension.js:82
 msgid "Strength:"
-msgstr "IntensitÃ :"
+msgstr "Intensità:"
 
 #: extension.js:88
 msgid "Color Blindness - Corrections"
@@ -79,7 +79,7 @@ msgstr "Desaturazione"
 
 #: extension.js:151
 msgid "Lightness Inversion"
-msgstr "Inversione luminositÃ"
+msgstr "Inversione luminosità"
 
 #: extension.js:156
 msgid "Color Inversion"
