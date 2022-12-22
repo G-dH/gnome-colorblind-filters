@@ -298,8 +298,9 @@ const MenuButton = GObject.registerClass ({
     }
 
     _saveSettings() {
+        // avoid unnecessary disk usage
         if (this._delayedSaveId) {
-            return;
+            GLib.source_remove(this._delayedSaveId);
         }
 
         this._delayedSaveId = GLib.timeout_add(
@@ -311,9 +312,10 @@ const MenuButton = GObject.registerClass ({
                 settings.set_string('filter-name', this._activeData.name);
                 settings.set_int('filter-strength', Math.round(this._filterStrength * 100));
                 if (this._switch.state) {
-                    // force re-adding effect updates the the whole screen immediately
-                    this._activeEffect.set_enabled(false);
-                    this._activeEffect.set_enabled(true);
+                    // re-enabling the effect updates the whole screen immediately, otherwise it can flicker / partially apply on some portions of the screen
+                    // but for a price of significant memory use (same as remove/add), which is often NOT released by the garbage collector
+                    //this._activeEffect.set_enabled(false);
+                    //this._activeEffect.set_enabled(true);
                 }
                 this._delayedSaveId = 0;
                 return GLib.SOURCE_REMOVE;
