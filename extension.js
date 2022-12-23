@@ -141,6 +141,14 @@ const MenuButton = GObject.registerClass ({
         brgItem._effect = this.Effects.ColorMixerBRG;
         this._menuItems.push(brgItem);
 
+        const redItem = new PopupMenu.PopupMenuItem(
+            _('Channel Mixer - RED only'),
+            false,
+          );
+          redItem.connect('activate', this._switchFilter.bind(this, redItem));
+          redItem._effect = this.Effects.ColorMixerRED;
+          this._menuItems.push(redItem);
+
         const desaturateItem = new PopupMenu.PopupMenuItem(_('Desaturation'), false);
         desaturateItem.connect('activate', this._switchFilter.bind(this, desaturateItem));
         desaturateItem._effect = this.Effects.Desaturation;
@@ -175,6 +183,7 @@ const MenuButton = GObject.registerClass ({
         otherExpander.menu.addMenuItem(desaturateItem);
         otherExpander.menu.addMenuItem(gbrItem);
         otherExpander.menu.addMenuItem(brgItem);
+        otherExpander.menu.addMenuItem(redItem);
         otherExpander.menu.addMenuItem(lightnessInversionItem);
         otherExpander.menu.addMenuItem(colorInversionItem);
 
@@ -609,6 +618,17 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'BRG',
                 properties: {
                     mode: 1,
+                    factor: 1
+                },
+                effect: this._getChannelMixerEffect,
+                sliderEnabled: true
+            },
+
+            ColorMixerRED: {
+                name: 'ColorMixerRED',
+                shortName: 'RED',
+                properties: {
+                    mode: 2,
                     factor: 1
                 },
                 effect: this._getChannelMixerEffect,

@@ -225,6 +225,8 @@ var ShaderLib = class {
                     m = vec4(c.b, c.r, c.g, c.a);
                 } else if (MIX_MODE == 1) {
                     m = vec4(c.g, c.b, c.r, c.a);
+                } else if (MIX_MODE == 2) {
+                    m = vec4(c.r, 0, 0, c.a);
                 }
                 c = m * STRENGTH + c * (1 - STRENGTH);
                 cogl_color_out = c;
