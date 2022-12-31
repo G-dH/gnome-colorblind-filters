@@ -20,6 +20,7 @@ class DesaturateEffect extends Clutter.DesaturateEffect {
 
     updateEffect(properties) {
         this.factor = properties.factor;
+        this.queue_repaint();
     }
 });
 
@@ -35,20 +36,17 @@ class InversionEffect extends Clutter.ShaderEffect {
 
     updateEffect(properties) {
         this._mode = properties.mode;
-        return;
+        this.queue_repaint();
     }
 
     vfunc_get_static_shader_source() {
         return this._source;
     }
 
-    vfunc_paint_target(node, paint_context) {
+    vfunc_paint_target(...args) {
         this.set_uniform_value('tex', 0);
         this.set_uniform_value('INVERSION_MODE', this._mode);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
+        super.vfunc_paint_target(...args);
     }
 });
 
@@ -66,20 +64,18 @@ class ColorMixerEffect extends Clutter.ShaderEffect {
     updateEffect(properties) {
         this._mode = properties.mode;
         this._strength = properties.factor;
+        this.queue_repaint();
     }
 
     vfunc_get_static_shader_source() {
         return this._source;
     }
 
-    vfunc_paint_target(node, paint_context) {
+    vfunc_paint_target(...args) {
         this.set_uniform_value('tex', 0);
         this.set_uniform_value('MIX_MODE', this._mode);
         this.set_uniform_value('STRENGTH', this._strength);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
+        super.vfunc_paint_target(...args);
     }
 });
 
@@ -97,20 +93,18 @@ class DaltonismEffect extends Clutter.ShaderEffect {
     updateEffect(properties) {
         this._mode = properties.mode;
         this._strength = properties.factor;
+        this.queue_repaint();
     }
 
     vfunc_get_static_shader_source() {
         return this._source;
     }
 
-    vfunc_paint_target(node, paint_context) {
+    vfunc_paint_target(...args) {
         this.set_uniform_value('tex', 0);
         this.set_uniform_value('COLORBLIND_MODE', this._mode);
         this.set_uniform_value('STRENGTH', this._strength);
-        if (paint_context === undefined)
-            super.vfunc_paint_target(node);
-        else
-            super.vfunc_paint_target(node, paint_context);
+        super.vfunc_paint_target(...args);
     }
 });
 
@@ -158,26 +152,58 @@ var ShaderLib = class {
                 error.g = (-0.0102485335f * l) + (0.0540193266f * m) + (-0.113614708f * s);
                 error.b = (-0.000365296938f * l) + (-0.00412161469f * m) + (0.693511405f * s);
 
-                // ratio between original and error colors allows adjusting filter for weaker forms of dichromacy
-                error = error * STRENGTH + c * (1 - STRENGTH);
-                error.a = 1;
-
                 // The error is what they see
+
                 if (COLORBLIND_MODE > 4) {
+                    // this is my attempt to improve algorithm of the simulation (GdH)
+                    // dichromatic people are missing one of the three color information,
+                    // but this doesn't mean that the missing color has no lightness for them
+                    // so we need to level up lightness of the missing color
+
+                    // convert input and output to grey scale
+                    float c_light = (mix(vec3(dot(c.rgb, vec3(0.299, 0.587, 0.114))), c.rgb, 1)).g;
+                    float e_light = (mix(vec3(dot(error.rgb, vec3(0.299, 0.587, 0.114))), error.rgb, 1)).g;
+                    // calculate difference in lightness
+                    float lightness_diff = e_light - c_light;
+
+                    if (COLORBLIND_MODE == 5) { // protanopia
+
+                        // shift lightness of the output towards the original lightness (this is how I see it "right")
+                        error.rg = error.rg + 2 * lightness_diff;
+                    }
+
+                    else if (COLORBLIND_MODE == 6) { // deuteranopia
+                        error.rg = error.rg + 0.7 * lightness_diff;
+                    }
+
+                    // ratio between original and error colors allows adjusting filter for weaker forms of dichromacy
+                    error = error * STRENGTH + c * (1 - STRENGTH);
+                    error.a = 1;
+
                     error.a = c.a;
                     cogl_color_out = error.rgba;
                     return;
                 } else {
+                    // ratio between original and error colors allows adjusting filter for weaker forms of dichromacy
+                    error = error * STRENGTH + c * (1 - STRENGTH);
+                    error.a = 1;
+
                     // Isolate invisible colors to color vision deficiency (calculate error matrix)
                     error = (c - error);
 
                     // Shift colors
                     vec4 correction;
-                    // protanopia / protanomaly corrections (kwin effect values)
+                    // protanopia / protanomaly corrections
                     if ( COLORBLIND_MODE == 0 ) {
-                        correction.r = error.r * 0.56667 + error.g * 0.43333 + error.b * 0.00000;
-                        correction.g = error.r * 0.55833 + error.g * 0.44267 + error.b * 0.00000;
-                        correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
+                        //(kwin effect values)
+                        //correction.r = error.r * 0.56667 + error.g * 0.43333 + error.b * 0.00000;
+                        //correction.g = error.r * 0.55833 + error.g * 0.44267 + error.b * 0.00000;
+                        //correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
+
+                        // tries to mimic Android, GdH
+                        correction.r = error.r * -0.5 + error.g * -0.3 + error.b * 0.0;
+                        correction.g = error.r *  0.2 + error.g *  0.0 + error.b * 0.0;
+                        correction.b = error.r *  0.2 + error.g *  1.0 + error.b * 1.0;
 
                     // protanopia / protanomaly high contrast G-R corrections
                     } else if ( COLORBLIND_MODE == 1 ) {
