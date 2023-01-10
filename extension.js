@@ -131,6 +131,11 @@ const MenuButton = GObject.registerClass ({
 
         const otherExpander = new PopupMenu.PopupSubMenuMenuItem(_('Other Effects'));
 
+        const desaturateItem = new PopupMenu.PopupMenuItem(_('Desaturation'), false);
+        desaturateItem.connect('activate', this._switchFilter.bind(this, desaturateItem));
+        desaturateItem._effect = this.Effects.Desaturation;
+        this._menuItems.push(desaturateItem);
+
         const gbrItem = new PopupMenu.PopupMenuItem(_('Channel Mixer - GBR'), false);
         gbrItem.connect('activate', this._switchFilter.bind(this, gbrItem));
         gbrItem._effect = this.Effects.ColorMixerGBR;
@@ -140,11 +145,6 @@ const MenuButton = GObject.registerClass ({
         brgItem.connect('activate', this._switchFilter.bind(this, brgItem));
         brgItem._effect = this.Effects.ColorMixerBRG;
         this._menuItems.push(brgItem);
-
-        const desaturateItem = new PopupMenu.PopupMenuItem(_('Desaturation'), false);
-        desaturateItem.connect('activate', this._switchFilter.bind(this, desaturateItem));
-        desaturateItem._effect = this.Effects.Desaturation;
-        this._menuItems.push(desaturateItem);
 
         const lightnessInversionItem = new PopupMenu.PopupMenuItem(_('Lightness Inversion'), false);
         lightnessInversionItem.connect('activate', this._switchFilter.bind(this, lightnessInversionItem));
