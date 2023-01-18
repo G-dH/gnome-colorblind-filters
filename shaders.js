@@ -196,14 +196,14 @@ var ShaderLib = class {
                     // protanopia / protanomaly corrections
                     if ( COLORBLIND_MODE == 0 ) {
                         //(kwin effect values)
-                        //correction.r = error.r * 0.56667 + error.g * 0.43333 + error.b * 0.00000;
-                        //correction.g = error.r * 0.55833 + error.g * 0.44267 + error.b * 0.00000;
-                        //correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
+                        correction.r = error.r * 0.56667 + error.g * 0.43333 + error.b * 0.00000;
+                        correction.g = error.r * 0.55833 + error.g * 0.44267 + error.b * 0.00000;
+                        correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
 
                         // tries to mimic Android, GdH
-                        correction.r = error.r * -0.5 + error.g * -0.3 + error.b * 0.0;
-                        correction.g = error.r *  0.2 + error.g *  0.0 + error.b * 0.0;
-                        correction.b = error.r *  0.2 + error.g *  1.0 + error.b * 1.0;
+                        //correction.r = error.r * -0.5 + error.g * -0.3 + error.b * 0.0;
+                        //correction.g = error.r *  0.2 + error.g *  0.0 + error.b * 0.0;
+                        //correction.b = error.r *  0.2 + error.g *  1.0 + error.b * 1.0;
 
                     // protanopia / protanomaly high contrast G-R corrections
                     } else if ( COLORBLIND_MODE == 1 ) {
