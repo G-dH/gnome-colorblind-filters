@@ -236,7 +236,7 @@ const MenuButton = GObject.registerClass ({
             this._filterStrength = activeItem.value;
             if (this._filterStrength === 0)
                 this._filterStrength += 0.001;
-            else
+            else if (this._filterStrength === 1)
                 this._filterStrength -= 0.001;
             this._updateEffect();
         }
@@ -337,7 +337,13 @@ const MenuButton = GObject.registerClass ({
         this._activeItem = item ? item : this._getItemByName('DeuterCorrection');
         this._activeData = item._effect;
         this._filterStrength = settings.get_int('filter-strength') / 100;
-        this._filterStrength = Math.clamp(0.01, this._filterStrength, 0.99);
+        // for some reason 0 and 1 don't update the shader
+        // Math.Clamp is not supported in older versions og gjs
+        //this._filterStrength = Math.clamp(0.01, this._filterStrength, 0.99);
+        if (this._filterStrength === 0)
+            this._filterStrength += 0.001;
+        else if (this._filterStrength === 1)
+            this._filterStrength -= 0.001;
         this._strengthSlider.value = this._filterStrength;
         this._switch.state = settings.get_boolean('filter-active');
     }
