@@ -14,6 +14,7 @@ const Main = imports.ui.main;
 const PopupMenu = imports.ui.popupMenu;
 const PanelMenu = imports.ui.panelMenu;
 const Slider = imports.ui.slider;
+const PANEL_ICON_SIZE = imports.ui.panel.PANEL_ICON_SIZE + 2;
 
 const ExtensionSystem = imports.ui.extensionSystem;
 const ExtensionUtils = imports.misc.extensionUtils;
@@ -230,7 +231,13 @@ const MenuButton = GObject.registerClass ({
         } else {
             // activeItem is strength slider
             // for some reason 0 and 1 don't update the shader
-            this._filterStrength = Math.clamp(0.001, activeItem.value, 0.999);
+            // Math.Clamp is not supported in older versions og gjs
+            // this._filterStrength = Math.clamp(0.001, activeItem.value, 0.999);
+            this._filterStrength = activeItem.value;
+            if (this._filterStrength === 0)
+                this._filterStrength += 0.001;
+            else
+                this._filterStrength -= 0.001;
             this._updateEffect();
         }
     }
@@ -432,7 +439,7 @@ const MenuButton = GObject.registerClass ({
         }
 
         const gicon = Gio.icon_new_for_string(`${Me.path}/icons/eye-${this._switch.state ? '' : 'disabled-'}symbolic.svg`);
-        const icon = new St.Icon({ gicon, icon_size: 20 });
+        const icon = new St.Icon({ gicon, icon_size: PANEL_ICON_SIZE });
 
         this._panelBin.add_child(icon);
         this._icon = icon;
