@@ -1,85 +1,85 @@
-# FRENCH TRANSLATION FOR GNOME-COLORBLIND-FILTERS.
-# Copyright (C) 2022 GdH
+# RUSSIAN TRANSLATION FOR GNOME-COLORBLIND-FILTERS.
+# Copyright (C) 2023 GdH
 # This file is distributed under the same license as the colorblind-filters package.
-# ALBANO BATTISTELLA <ALBANO_BATTISTELLA@HOTMAIL.COM>, 2023.
+# lenemter <lenemter@gmail.com>, 2023.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: colorblind-filters\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2022-12-17 16:40+0100\n"
-"PO-Revision-Date: 2023-01-29 17:01+0100\n"
-"Last-Translator: Albano Battistella <albano_battistella@hotmail.com>\n"
-"Language-Team: French <LL@li.org>\n"
-"Language: fr\n"
+"PO-Revision-Date: 2023-03-30 17:18+0900\n"
+"Last-Translator: lenemter <lenemter@gmail.com>\n"
+"Language-Team: none\n"
+"Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #: extension.js:82
 msgid "Strength:"
-msgstr "Intensité:"
+msgstr "Интенсивность:"
 
 #: extension.js:88
 msgid "Color Blindness - Corrections"
-msgstr "Corrections - Daltonisme"
+msgstr "Дальтонизм - Коррекция"
 
 #: extension.js:91
 msgid "Protanopia Correction"
-msgstr "Correction protanopie"
+msgstr "Коррекция протанопии"
 
 #: extension.js:96
 msgid "Protanopia High Contrast"
-msgstr "Protanopie à contraste élevé"
+msgstr "Протанопия (высокий контраст)"
 
 #: extension.js:101
 msgid "Deuteranopia Correction"
-msgstr "Correction de deutéranopie"
+msgstr "Коррекция дейтеранопии"
 
 #: extension.js:106
 msgid "Deuteranopia High Contrast"
-msgstr "Deutéranopie Contraste élevé"
+msgstr "Дейтеранопия (высокий контраст)"
 
 #: extension.js:111
 msgid "Tritanopia Correction"
-msgstr "Correction de la tritanopie"
+msgstr "Коррекция тританопии"
 
 #: extension.js:117
 msgid "Color Blindness - Simulations"
-msgstr "Simulations - Daltonisme"
+msgstr "Дальтонизм - Симуляции"
 
 #: extension.js:119
 msgid "Protanopia Simulation"
-msgstr "Simulation de protanopie"
+msgstr "Симуляция протанопии"
 
 #: extension.js:124
 msgid "Deuteranopia Simulation"
-msgstr "Simulation de deutéranopie"
+msgstr "Симуляция дейтеранопии"
 
 #: extension.js:129
 msgid "Tritanopia Simulation"
-msgstr "Simulation de tritanopie"
+msgstr "Симуляция тританопии"
 
 #: extension.js:134
 msgid "Other Effects"
-msgstr "Autres effets"
+msgstr "Другие эффекты"
 
 #: extension.js:136
 msgid "Channel Mixer - GBR"
-msgstr "Mélangeur de canaux - GBR"
+msgstr "Микшер каналов - GBR"
 
 #: extension.js:141
 msgid "Channel Mixer - BRG"
-msgstr "Mélangeur de canaux - BRG"
+msgstr "Микшер каналов - BRG"
 
 #: extension.js:146
 msgid "Desaturation"
-msgstr "Désaturation"
+msgstr "Десатурация"
 
 #: extension.js:151
 msgid "Lightness Inversion"
-msgstr "Inversion de luminosité"
+msgstr "Инверсия яркости"
 
 #: extension.js:156
 msgid "Color Inversion"
-msgstr "Inversion de couleur"
+msgstr "Инверсия цветов"
