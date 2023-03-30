@@ -444,7 +444,7 @@ const MenuButton = GObject.registerClass ({
             this._icon = null;
         }
 
-        const gicon = Gio.icon_new_for_string(`${Me.path}/icons/eye-${this._switch.state ? '' : 'disabled-'}symbolic.svg`);
+        const gicon = Gio.icon_new_for_string(`view-${this._switch.state ? 'reveal' : 'conceal'}-symbolic`);
         const icon = new St.Icon({ gicon, icon_size: PANEL_ICON_SIZE });
 
         this._panelBin.add_child(icon);
