@@ -3,51 +3,47 @@
  * extension.js
  *
  * @author     GdH <G-dH@github.com>
- * @copyright  2022
+ * @copyright  2022-2023
  * @license    GPL-3.0
  */
 'use strict';
 
-const { Gio, GLib, GObject, St, Clutter } = imports.gi;
+import GLib from 'gi://GLib';
+import Clutter from 'gi://Clutter';
+import St from 'gi://St';
+import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
 
-const Main = imports.ui.main;
-const PopupMenu = imports.ui.popupMenu;
-const PanelMenu = imports.ui.panelMenu;
-const Slider = imports.ui.slider;
-const PANEL_ICON_SIZE = imports.ui.panel.PANEL_ICON_SIZE + 2;
+import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import * as Slider from 'resource:///org/gnome/shell/ui/slider.js';
 
-const ExtensionSystem = imports.ui.extensionSystem;
-const ExtensionUtils = imports.misc.extensionUtils;
-const Me = ExtensionUtils.getCurrentExtension();
-const Shaders = Me.imports.shaders;
+import { Extension } from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const Gettext = imports.gettext.domain(Me.metadata['gettext-domain']);
-const _ = Gettext.gettext;
+import * as Shaders from './shaders.js';
 
-let menu;
+const PANEL_ICON_SIZE = 18; // default +2 looks better
+let _;
 
+export default class CBFilters extends Extension {
+    enable() {
+        _ = this.gettext.bind(this);
+        this._menu = new MenuButton(this);
+        Main.panel.addToStatusArea('ColorBlindFilters', this._menu, 0, 'right');
+    }
 
-function init() {
-    ExtensionUtils.initTranslations();
+    disable() {
+        this._menu.destroy();
+        this._menu = null;
+        _ = null;
+    }
 }
 
-function enable() {
-    menu = new MenuButton();
-    Main.panel.addToStatusArea("ColorBlindFilters", menu, 0, "right");
-}
-
-function disable() {
-    menu.destroy();
-    menu = null;
-}
-
-
-const MenuButton = GObject.registerClass ({
-    GTypeName: 'CBMenuButton',}, class MenuButton extends PanelMenu.Button {
-    _init() {
+const MenuButton = GObject.registerClass({ GTypeName: 'CBMenuButton' }, class MenuButton extends PanelMenu.Button {
+    _init(me) {
         super._init(0.5, 'ColorblindMenu', false);
-        const schema = Me.metadata['settings-schema'];
-        this._settings = ExtensionUtils.getSettings(schema);
+        this._settings = me.getSettings();
         this._filterName = 'colorblind';
         this._getEffects();
 
@@ -78,7 +74,7 @@ const MenuButton = GObject.registerClass ({
         const strengthSlider = new Slider.Slider(0);
         const sliderMenuItem = new PopupMenu.PopupBaseMenuItem();
         sliderMenuItem._slider = true;
-        const label =  new St.Label({text: _('Strength:')});
+        const label =  new St.Label({ text: _('Strength:') });
         sliderMenuItem.add_child(label);
         sliderMenuItem.add_child(strengthSlider);
         this._strengthMenuItem = sliderMenuItem;
@@ -183,14 +179,14 @@ const MenuButton = GObject.registerClass ({
         this._setShaderEffect();
 
         strengthSlider.connect('notify::value', this._switchFilter.bind(this, strengthSlider));
-        this.connect('destroy', ()=> {
+        this.connect('destroy', () => {
             this._removeEffect();
             this._activeEffect = null;
             this._clearEffects();
 
-            if (this._labelTimeoutId) {
+            if (this._labelTimeoutId)
                 GLib.source_remove(this._labelTimeoutId);
-            }
+
             if (this._delayedSaveId) {
                 GLib.source_remove(this._delayedSaveId);
                 this._delayedSaveId = 0;
@@ -201,11 +197,10 @@ const MenuButton = GObject.registerClass ({
 
     _switchToggled() {
         if (this._switch.state) {
-            if (this._activeEffect) {
+            if (this._activeEffect)
                 this._addEffect(this._activeEffect);
-            } else {
+            else
                 this._setShaderEffect();
-            }
         } else {
             this._removeEffect();
         }
@@ -220,14 +215,13 @@ const MenuButton = GObject.registerClass ({
 
         if (activeItem.value === undefined) {
             // active item is filter
-            const sameShader = activeItem._effect.effect == this._activeData.effect;
+            const sameShader = activeItem._effect.effect === this._activeData.effect;
             this._activeItem = activeItem;
             this._activeData = activeItem._effect;
-            if (sameShader) {
+            if (sameShader)
                 this._updateEffect();
-            } else {
+            else
                 this._setShaderEffect();
-            }
         } else {
             // activeItem is strength slider
             // for some reason 0 and 1 don't update the shader
@@ -243,21 +237,20 @@ const MenuButton = GObject.registerClass ({
     }
 
     _setOrnament() {
-        for (const item of this._menuItems) {
+        for (const item of this._menuItems)
             item.setOrnament(false);
-        }
+
 
         const item = this._activeItem;
         const slider = this._strengthMenuItem;
         item.setOrnament(true);
 
-        if (item._effect.sliderEnabled) {
+        if (item._effect.sliderEnabled)
             slider.visible = true;
-        } else {
+        else
             slider.visible = false;
-        }
-        this._activeLabel.text = item.label.text;
 
+        this._activeLabel.text = item.label.text;
     }
 
     _updateEffect() {
@@ -269,9 +262,9 @@ const MenuButton = GObject.registerClass ({
     _getProperties() {
         const effectData = this._activeData;
         const properties = effectData.properties;
-        if (properties.factor !== undefined) {
+        if (properties.factor !== undefined)
             properties.factor = this._filterStrength;
-        }
+
         return properties;
     }
 
@@ -284,9 +277,9 @@ const MenuButton = GObject.registerClass ({
         this._removeEffect();
         this._updateExtension();
 
-        if (!this._switch.state) {
+        if (!this._switch.state)
             return;
-        }
+
 
         const properties = this._getProperties();
 
@@ -306,9 +299,9 @@ const MenuButton = GObject.registerClass ({
 
     _saveSettings() {
         // avoid unnecessary disk usage
-        if (this._delayedSaveId) {
+        if (this._delayedSaveId)
             GLib.source_remove(this._delayedSaveId);
-        }
+
 
         this._delayedSaveId = GLib.timeout_add(
             GLib.PRIORITY_DEFAULT,
@@ -321,8 +314,8 @@ const MenuButton = GObject.registerClass ({
                 if (this._switch.state) {
                     // re-enabling the effect updates the whole screen immediately, otherwise it can flicker / partially apply on some portions of the screen
                     // but for a price of significant memory use (same as remove/add), which is often NOT released by the garbage collector
-                    //this._activeEffect.set_enabled(false);
-                    //this._activeEffect.set_enabled(true);
+                    // this._activeEffect.set_enabled(false);
+                    // this._activeEffect.set_enabled(true);
                 }
                 this._delayedSaveId = 0;
                 return GLib.SOURCE_REMOVE;
@@ -339,7 +332,7 @@ const MenuButton = GObject.registerClass ({
         this._filterStrength = settings.get_int('filter-strength') / 100;
         // for some reason 0 and 1 don't update the shader
         // Math.Clamp is not supported in older versions og gjs
-        //this._filterStrength = Math.clamp(0.01, this._filterStrength, 0.99);
+        // this._filterStrength = Math.clamp(0.01, this._filterStrength, 0.99);
         if (this._filterStrength === 0)
             this._filterStrength += 0.001;
         else if (this._filterStrength === 1)
@@ -350,10 +343,10 @@ const MenuButton = GObject.registerClass ({
 
     _getItemByName(name) {
         for (const item of this._menuItems) {
-            if (item._effect.name === name) {
+            if (item._effect.name === name)
                 return item;
-            }
         }
+        return null;
     }
 
     vfunc_event(event) {
@@ -364,9 +357,9 @@ const MenuButton = GObject.registerClass ({
         if (this._switch.state && event.type() === Clutter.EventType.SCROLL && (Date.now() - this._actionTime) > 200) {
             const direction = event.get_scroll_direction();
 
-            if (direction === Clutter.ScrollDirection.SMOOTH) {
+            if (direction === Clutter.ScrollDirection.SMOOTH)
                 return Clutter.EVENT_STOP;
-            }
+
 
             const step = direction === Clutter.ScrollDirection.UP ? 10 : 1;
             const index = (this._menuItems.indexOf(this._activeItem) + step) % 11;
@@ -381,38 +374,36 @@ const MenuButton = GObject.registerClass ({
             // primary button toggles active filter on/off
             if (event.get_button() === Clutter.BUTTON_PRIMARY) {
                 this._switch.state = !this._switch.state;
-                //this._setShaderEffect();
+                // this._setShaderEffect();
                 this._switchToggled();
                 return Clutter.EVENT_STOP;
-
             } else if (this._switch.state && event.get_button() === Clutter.BUTTON_MIDDLE) {
                 // middle clicking on panel btn switches between normal correction, high contrast and off state for the active cb type
                 let item;
                 const effectName = this._activeData.name;
 
                 switch (effectName) {
-                    case 'ProtanCorrection':
-                        item = this._getItemByName('ProtanCorrectionHighContrast');
-                        break;
-                    case 'ProtanCorrectionHighContrast':
-                        item = this._getItemByName('ProtanCorrection');
-                        break;
-                    case 'DeuterCorrection':
-                        item = this._getItemByName('DeuterCorrectionHighContrast');
-                        break;
-                    case 'DeuterCorrectionHighContrast':
-                        item = this._getItemByName('DeuterCorrection');
-                        break;
+                case 'ProtanCorrection':
+                    item = this._getItemByName('ProtanCorrectionHighContrast');
+                    break;
+                case 'ProtanCorrectionHighContrast':
+                    item = this._getItemByName('ProtanCorrection');
+                    break;
+                case 'DeuterCorrection':
+                    item = this._getItemByName('DeuterCorrectionHighContrast');
+                    break;
+                case 'DeuterCorrectionHighContrast':
+                    item = this._getItemByName('DeuterCorrection');
+                    break;
                 }
 
-                if (item) {
+                if (item)
                     this._switchFilter(item);
-                }
+
 
                 this._setPanelLabel();
                 return Clutter.EVENT_STOP;
             }
-
         } else if (event.type() === Clutter.EventType.TOUCH_BEGIN || (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === Clutter.BUTTON_SECONDARY)) {
             this.menu.toggle();
             this._correctionsExpander.setSubmenuShown(true);
@@ -423,9 +414,9 @@ const MenuButton = GObject.registerClass ({
     }
 
     _setPanelLabel(item) {
-        if (!item) {
+        if (!item)
             item = this._activeItem;
-        }
+
 
         if (this._switch.state) {
             this._panelLabel.text = this._activeData.shortName;
@@ -452,9 +443,9 @@ const MenuButton = GObject.registerClass ({
     }
 
     _resetLabelTimeout() {
-        if (this._labelTimeoutId) {
+        if (this._labelTimeoutId)
             GLib.source_remove(this._labelTimeoutId);
-        }
+
 
         this._labelTimeoutId = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT,
@@ -470,41 +461,41 @@ const MenuButton = GObject.registerClass ({
     }
 
     _getDaltonismEffect(properties) {
-        if (!this._daltonismEffect) {
+        if (!this._daltonismEffect)
             this._daltonismEffect = new Shaders.DaltonismEffect(properties);
-        } else {
+        else
             this._daltonismEffect.updateEffect(properties);
-        }
+
 
         return this._daltonismEffect;
     }
 
     _getChannelMixerEffect(properties) {
-        if (!this._channelMixerEffect) {
+        if (!this._channelMixerEffect)
             this._channelMixerEffect = new Shaders.ColorMixerEffect(properties);
-        } else {
+        else
             this._channelMixerEffect.updateEffect(properties);
-        }
+
 
         return this._channelMixerEffect;
     }
 
     _getDesaturateEffect(properties) {
-        if (!this._desaturateEffect) {
+        if (!this._desaturateEffect)
             this._desaturateEffect = new Shaders.DesaturateEffect(properties);
-        } else {
+        else
             this._desaturateEffect.updateEffect(properties);
-        }
+
 
         return this._desaturateEffect;
     }
 
     _getInversionEffect(properties) {
-        if (!this._inversionEffect) {
+        if (!this._inversionEffect)
             this._inversionEffect = new Shaders.InversionEffect(properties);
-        } else {
+        else
             this._inversionEffect.updateEffect(properties);
-        }
+
 
         return this._inversionEffect;
     }
@@ -523,10 +514,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'PC',
                 properties: {
                     mode: 0,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             ProtanCorrectionHighContrast: {
@@ -534,10 +525,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'PH',
                 properties: {
                     mode: 1,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             DeuterCorrection: {
@@ -545,10 +536,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'DC',
                 properties: {
                     mode: 2,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             DeuterCorrectionHighContrast: {
@@ -556,10 +547,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'DH',
                 properties: {
                     mode: 3,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             TritanCorrection: {
@@ -567,10 +558,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'TC',
                 properties: {
                     mode: 4,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             ProtanSimulation: {
@@ -578,10 +569,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'PS',
                 properties: {
                     mode: 5,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             DeuterSimulation: {
@@ -589,10 +580,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'DS',
                 properties: {
                     mode: 6,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             TritanSimulation: {
@@ -600,10 +591,10 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'TS',
                 properties: {
                     mode: 7,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDaltonismEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             ColorMixerGBR: {
@@ -614,7 +605,7 @@ const MenuButton = GObject.registerClass ({
                     factor: 1,
                 },
                 effect: this._getChannelMixerEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             ColorMixerBRG: {
@@ -622,41 +613,41 @@ const MenuButton = GObject.registerClass ({
                 shortName: 'BRG',
                 properties: {
                     mode: 1,
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getChannelMixerEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             Desaturation: {
                 name: 'Desaturation',
                 shortName: 'D',
                 properties: {
-                    factor: 1
+                    factor: 1,
                 },
                 effect: this._getDesaturateEffect,
-                sliderEnabled: true
+                sliderEnabled: true,
             },
 
             LigtnessInversion: {
                 name: 'LightnessInversion',
                 shortName: 'LI',
                 properties: {
-                    mode: 0
+                    mode: 0,
                 },
                 effect: this._getInversionEffect,
-                sliderEnabled: false
+                sliderEnabled: false,
             },
 
             ColorInversion: {
                 name: 'ColorInversion',
                 shortName: 'CI',
                 properties: {
-                    mode: 2
+                    mode: 2,
                 },
                 effect: this._getInversionEffect,
-                sliderEnabled: false
+                sliderEnabled: false,
             },
-        }
+        };
     }
 });
