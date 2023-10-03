@@ -238,12 +238,12 @@ const MenuButton = GObject.registerClass({ GTypeName: 'CBMenuButton' }, class Me
 
     _setOrnament() {
         for (const item of this._menuItems)
-            item.setOrnament(false);
+            item.setOrnament(PopupMenu.Ornament.NONE);
 
 
         const item = this._activeItem;
         const slider = this._strengthMenuItem;
-        item.setOrnament(true);
+        item.setOrnament(PopupMenu.Ornament.DOT);
 
         if (item._effect.sliderEnabled)
             slider.visible = true;
