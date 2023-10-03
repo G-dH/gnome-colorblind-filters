@@ -9,13 +9,13 @@ Supports GNOME Shell 3.36 - 45
 ## Installation
 ### GNOME 3.36-44
 
-    git clone git@github.com:G-dH/gnome-colorblind-filters
+    git clone https://github.com/G-dH/gnome-colorblind-filters
     cd gnome-colorblind-filters
     make install
 
 ### GNOME 45
 
-    git clone git@github.com:G-dH/gnome-colorblind-filters
+    git clone https://github.com/G-dH/gnome-colorblind-filters
     cd gnome-colorblind-filters
     git checkout esm-modules 
     make install
