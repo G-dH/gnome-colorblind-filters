@@ -109,9 +109,6 @@ class DaltonismEffect extends Clutter.ShaderEffect {
 });
 
 var ShaderLib = class {
-    constructor() {
-    }
-
     static getDaltonism() {
         return `
             uniform sampler2D tex;
@@ -122,9 +119,9 @@ var ShaderLib = class {
                 vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
 
                 // RGB to LMS matrix
-                float L = (17.8824f * c.r) + (43.5161f * c.g) + (4.11935f * c.b);
-                float M = (3.45565f * c.r) + (27.1554f * c.g) + (3.86714f * c.b);
-                float S = (0.0299566f * c.r) + (0.184309f * c.g) + (1.46709f * c.b);
+                float L = (17.8824 * c.r) + (43.5161 * c.g) + (4.11935 * c.b);
+                float M = (3.45565 * c.r) + (27.1554 * c.g) + (3.86714 * c.b);
+                float S = (0.0299566 * c.r) + (0.184309 * c.g) + (1.46709 * c.b);
 
                 float l;
                 float m;
@@ -132,25 +129,25 @@ var ShaderLib = class {
 
                 // Remove invisible colors
                 if ( COLORBLIND_MODE == 0 || COLORBLIND_MODE == 1 || COLORBLIND_MODE == 5 ) { // Protanopia - reds are greatly reduced
-                    l = 0.0f * L + 2.02344f * M + -2.52581f * S;
-                    m = 0.0f * L + 1.0f * M + 0.0f * S;
-                    s = 0.0f * L + 0.0f * M + 1.0f * S;
+                    l = 0.0 * L + 2.02344 * M + -2.52581 * S;
+                    m = 0.0 * L + 1.0 * M + 0.0 * S;
+                    s = 0.0 * L + 0.0 * M + 1.0 * S;
                 } else if ( COLORBLIND_MODE == 2 || COLORBLIND_MODE == 3 || COLORBLIND_MODE == 6) {// Deuteranopia - greens are greatly reduced
-                    l = 1.0f * L + 0.0f * M + 0.0f * S;
-                    m = 0.494207f * L + 0.0f * M + 1.24827f * S;
-                    s = 0.0f * L + 0.0f * M + 1.0f * S;
+                    l = 1.0 * L + 0.0 * M + 0.0 * S;
+                    m = 0.494207 * L + 0.0 * M + 1.24827 * S;
+                    s = 0.0 * L + 0.0 * M + 1.0 * S;
                 } else if ( COLORBLIND_MODE == 4 || COLORBLIND_MODE == 7) {// Tritanopia - blues are greatly reduced (1 of 10 000)
-                    l = 1.0f * L + 0.0f * M + 0.0f * S;
-                    m = 0.0f * L + 1.0f * M + 0.0f * S;
+                    l = 1.0 * L + 0.0 * M + 0.0 * S;
+                    m = 0.0 * L + 1.0 * M + 0.0 * S;
                     // GdH - trinatopia vector calculated by me, all public sources were off
-                    s = -0.012491378299329402f * L + 0.07203451899279534f * M + 0.0f * S;
+                    s = -0.012491378299329402 * L + 0.07203451899279534 * M + 0.0 * S;
                 }
 
                 // LMS to RGB matrix conversion
                 vec4 error;
-                error.r = (0.0809444479f * l) + (-0.130504409f * m) + (0.116721066f * s);
-                error.g = (-0.0102485335f * l) + (0.0540193266f * m) + (-0.113614708f * s);
-                error.b = (-0.000365296938f * l) + (-0.00412161469f * m) + (0.693511405f * s);
+                error.r = (0.0809444479 * l) + (-0.130504409 * m) + (0.116721066 * s);
+                error.g = (-0.0102485335 * l) + (0.0540193266 * m) + (-0.113614708 * s);
+                error.b = (-0.000365296938 * l) + (-0.00412161469 * m) + (0.693511405 * s);
 
                 // The error is what they see
 
@@ -161,15 +158,15 @@ var ShaderLib = class {
                     // so we need to level up lightness of the missing color
 
                     // convert input and output to grey scale
-                    float c_light = (mix(vec3(dot(c.rgb, vec3(0.299, 0.587, 0.114))), c.rgb, 1)).g;
-                    float e_light = (mix(vec3(dot(error.rgb, vec3(0.299, 0.587, 0.114))), error.rgb, 1)).g;
+                    float c_light = (mix(vec3(dot(c.rgb, vec3(0.299, 0.587, 0.114))), c.rgb, 1.0)).g;
+                    float e_light = (mix(vec3(dot(error.rgb, vec3(0.299, 0.587, 0.114))), error.rgb, 1.0)).g;
                     // calculate difference in lightness
                     float lightness_diff = e_light - c_light;
 
                     if (COLORBLIND_MODE == 5) { // protanopia
 
                         // shift lightness of the output towards the original lightness (this is how I see it "right")
-                        error.rg = error.rg + 2 * lightness_diff;
+                        error.rg = error.rg + 2.0 * lightness_diff;
                     }
 
                     else if (COLORBLIND_MODE == 6) { // deuteranopia
@@ -177,16 +174,16 @@ var ShaderLib = class {
                     }
 
                     // ratio between original and error colors allows adjusting filter for weaker forms of dichromacy
-                    error = error * STRENGTH + c * (1 - STRENGTH);
-                    error.a = 1;
+                    error = error * STRENGTH + c * (1.0 - STRENGTH);
+                    error.a = 1.0;
 
                     error.a = c.a;
                     cogl_color_out = error.rgba;
                     return;
                 } else {
                     // ratio between original and error colors allows adjusting filter for weaker forms of dichromacy
-                    error = error * STRENGTH + c * (1 - STRENGTH);
-                    error.a = 1;
+                    error = error * STRENGTH + c * (1.0 - STRENGTH);
+                    error.a = 1.0;
 
                     // Isolate invisible colors to color vision deficiency (calculate error matrix)
                     error = (c - error);
@@ -252,7 +249,7 @@ var ShaderLib = class {
                 } else if (MIX_MODE == 1) {
                     m = vec4(c.g, c.b, c.r, c.a);
                 }
-                c = m * STRENGTH + c * (1 - STRENGTH);
+                c = m * STRENGTH + c * (1.0 - STRENGTH);
                 cogl_color_out = c;
             }
         `;
@@ -272,7 +269,8 @@ var ShaderLib = class {
                 vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
                 if (INVERSION_MODE < 2) {
                     /* INVERSION_MODE ? shifted : non-shifted */
-                    float white_bias = INVERSION_MODE * c.a * .02;
+                    float mode = float(INVERSION_MODE);
+                    float white_bias = mode * c.a * 0.02;
                     float m = 1.0 + white_bias;
                     float shift = white_bias + c.a - min(c.r, min(c.g, c.b)) - max(c.r, max(c.g, c.b));
                     c = vec4(  ((shift + c.r) / m),
@@ -281,7 +279,7 @@ var ShaderLib = class {
                                c.a);
 
                 } else if (INVERSION_MODE == 2) {
-                    c = vec4(c.a * 1 - c.r, c.a * 1 - c.g, c.a * 1 - c.b, c.a);
+                    c = vec4(c.a * 1.0 - c.r, c.a * 1.0 - c.g, c.a * 1.0 - c.b, c.a);
                 }
 
                 // gamma has to be compensated to maintain perceived differences in lightness on dark and light ends of the lightness scale
