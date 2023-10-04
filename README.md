@@ -2,8 +2,17 @@
 A GNOME Shell extension for main panel that offers full-screen color filters that should help color-blind users and developers.
 
 ## Installation
-    git clone git@github.com:G-dH/gnome-colorblind-filters
+### GNOME 3.36 - 44
+
+    git clone https://github.com/G-dH/gnome-colorblind-filters.git
     cd gnome-colorblind-filters
+    make install
+
+### GNOME 45
+
+    git clone https://github.com/G-dH/gnome-colorblind-filters.git
+    cd gnome-colorblind-filters
+    git checkout esm-modules
     make install
 
 ## Contribution
