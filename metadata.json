@@ -7,6 +7,9 @@
     "45"
   ],
   "url": "https://github.com/G-dH/gnome-colorblind-filters",
+  "donations": {
+    "buymeacoffee": "georgdh"
+  },
   "uuid": "colorblind-filters@G-dH.github.com",
   "version": 18
 }
