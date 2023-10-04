@@ -7,15 +7,15 @@ Supports GNOME Shell 3.36 - 45
 ![Colorblind Filters menu](colorblind-filters.png)
 
 ## Installation
-### GNOME 3.36-44
+#### GNOME 3.36-44
 
-    git clone https://github.com/G-dH/gnome-colorblind-filters
+    git clone https://github.com/G-dH/gnome-colorblind-filters.git
     cd gnome-colorblind-filters
     make install
 
-### GNOME 45
+#### GNOME 45
 
-    git clone https://github.com/G-dH/gnome-colorblind-filters
+    git clone https://github.com/G-dH/gnome-colorblind-filters.git
     cd gnome-colorblind-filters
     git checkout esm-modules 
     make install
