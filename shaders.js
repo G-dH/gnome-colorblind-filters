@@ -1,9 +1,9 @@
 /**
  * ColorBlind Filters
- * Shaders
+ * shaders.js
  *
  * @author     GdH <G-dH@github.com>
- * @copyright  2022-23
+ * @copyright  2022-2024
  * @license    GPL-3.0
  */
 

@@ -3,7 +3,7 @@
  * extension.js
  *
  * @author     GdH <G-dH@github.com>
- * @copyright  2022-2023
+ * @copyright  2022-2024
  * @license    GPL-3.0
  */
 'use strict';
@@ -40,7 +40,8 @@ export default class CBFilters extends Extension {
     }
 }
 
-const MenuButton = GObject.registerClass({ GTypeName: 'CBMenuButton' }, class MenuButton extends PanelMenu.Button {
+const MenuButton = GObject.registerClass(
+class MenuButton extends PanelMenu.Button {
     _init(me) {
         super._init(0.5, 'ColorblindMenu', false);
         this._settings = me.getSettings();
