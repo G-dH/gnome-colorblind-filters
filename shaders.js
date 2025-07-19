@@ -3,7 +3,7 @@
  * shaders.js
  *
  * @author     GdH <G-dH@github.com>
- * @copyright  2022-2024
+ * @copyright  2022-2025
  * @license    GPL-3.0
  */
 
@@ -204,11 +204,17 @@ export const ShaderLib = class {
                         correction.g = error.r * 1.55833 + error.g * 0.44267 + error.b * 0.00000;
                         correction.b = error.r * 0.00000 + error.g * 0.24167 + error.b * 0.75833;
 
-                    // deuteranopia / deuteranomaly corrections (Fixed to make this useful for colorblind people because Android sucks, I have colorblindness but for other's types I'm not sure but this is my colorblindness type and this works for me)
+                    // deuteranopia / deuteranomaly corrections
                     } else if ( COLORBLIND_MODE == 2 ) {
+                        // Adjusted "to make this useful for colorblind people because Android sucks" - github.com/Garfield2150
                         correction.r = error.r * 0.8 + error.g * 0.0 + error.b * 0.0;
                         correction.g = error.r *  0.0 + error.g * 0.0 + error.b * 0.0;
                         correction.b = error.r * -0.2 + error.g * 0.8 + error.b * 0.8;
+
+                        // tries to mimic Android - GdH
+                        // correction.r = error.r * -0.7 + error.g * 0.0 + error.b * 0.0;
+                        // correction.g = error.r *  0.5 + error.g * 1.0 + error.b * 0.0;
+                        // correction.b = error.r * -0.3 + error.g * 0.0 + error.b * 1.0;
 
                     // deuteranopia / deuteranomaly high contrast R-G corrections
                     } else if ( COLORBLIND_MODE == 3 ) {
