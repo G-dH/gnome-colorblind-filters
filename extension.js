@@ -13,6 +13,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
+import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -45,7 +46,6 @@ class MenuButton extends PanelMenu.Button {
     _init(me) {
         super._init(0.5, 'ColorblindMenu', false);
         this._settings = me.getSettings();
-        this._filterName = 'colorblind';
         this._getEffects();
 
         this._actionTime = 0;
@@ -53,6 +53,8 @@ class MenuButton extends PanelMenu.Button {
         this._activeData = null;
         this._filterStrength = 1;
         this._menuItems = [];
+
+        this._effectTarget = new EffectTarget('colorblind');
 
         const bin = new St.BoxLayout();
         const panelLabel = new St.Label({ y_align: Clutter.ActorAlign.CENTER });
@@ -184,6 +186,7 @@ class MenuButton extends PanelMenu.Button {
             this._removeEffect();
             this._activeEffect = null;
             this._clearEffects();
+            this._effectTarget.destroy();
 
             if (this._labelTimeoutId)
                 GLib.source_remove(this._labelTimeoutId);
@@ -290,12 +293,12 @@ class MenuButton extends PanelMenu.Button {
     }
 
     _addEffect(effect) {
-        Main.uiGroup.add_effect_with_name(this._filterName, effect);
+        this._effectTarget.set_effect(effect);
         this._activeEffect = effect;
     }
 
     _removeEffect() {
-        Main.uiGroup.remove_effect_by_name(this._filterName);
+        this._effectTarget.set_effect(null);
     }
 
     _saveSettings() {
@@ -652,3 +655,105 @@ class MenuButton extends PanelMenu.Button {
         };
     }
 });
+
+// Always apply effects to a Clutter.Clone; see discussion in
+// https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2269
+//
+// EffectTarget tracks exactly what should be cloned and attaches clones as
+// needed. Because the screen magnifier gets its content from uiGroup and not
+// our clone, and because it draws over the top of us, we need to reattach our
+// effect when it appears/disappears. One complication: anything that was
+// touching the magnifier when it is destroyed becomes radioactive and must be
+// decontaminated.
+class EffectTarget {
+    constructor(filterName) {
+        this._filterName = filterName;
+        this._currentEffect = null;
+        this._sourceClone = null;
+        this._currentSource = { source: Main.uiGroup, destroyConn: null };
+
+        const globalStage = Shell.Global.get().stage;
+        this._stageAddConn = globalStage.connect(
+            'child-added', (_stage, actor) => { this._onUiGroupAttach(actor); });
+        globalStage.get_children().forEach(child => this._onUiGroupAttach(child));
+    }
+
+    destroy() {
+        Shell.Global.get().stage.disconnect(this._stageAddConn);
+        this.set_effect(null, null);
+        this._setSource(null);
+    }
+
+    set_effect(new_effect) {
+        if (new_effect === this._currentEffect) {
+            return;
+        }
+
+        const clone = this._ensureClone();
+
+        if (this._currentEffect) {
+            clone.remove_effect(this._currentEffect);
+        }
+
+        this._currentEffect = new_effect;
+
+        if (new_effect) {
+            clone.add_effect_with_name(this._filterName, new_effect);
+        } else {
+            this._destroyClone();
+        }
+    }
+
+    _onUiGroupAttach(source) {
+        if (!source.style_class?.split(' ').some(s => s === 'magnifier-zoom-region')) {
+            return;
+        }
+
+        const destroy_conn = source.connect('destroy', () => {
+            // not safe to call .disconnect() on a destroyed object
+            this._currentSource.destroyConn = null;
+
+            this._setSource(Main.uiGroup);
+        });
+
+        this._setSource(source, destroy_conn);
+    }
+
+    _setSource(source, destroy_conn = null) {
+        if (this._currentSource.destroyConn) {
+            this._currentSource.source.disconnect(this._currentSource.destroyConn);
+        }
+        this._destroyClone();
+
+        this._currentSource = { source, destroy_conn };
+        if (this._currentEffect) {
+            this._ensureClone().add_effect_with_name(this._filterName, this._currentEffect);
+        }
+    }
+
+    _ensureClone() {
+        if (!this._sourceClone) {
+            this._sourceClone = new Clutter.Clone({
+                source: this._currentSource.source,
+                clip_to_allocation: true,
+            });
+            Shell.Global.get().stage.add_child(this._sourceClone);
+        }
+        return this._sourceClone;
+    }
+
+    _destroyClone() {
+        if (this._sourceClone) {
+            const clone = this._sourceClone;
+            this._sourceClone = null;
+
+            if (this._currentEffect) {
+                clone.remove_effect(this._currentEffect);
+            }
+
+            clone.set_source(null);
+            Shell.Global.get().stage.remove_child(clone);
+            clone.destroy();
+        }
+    }
+}
