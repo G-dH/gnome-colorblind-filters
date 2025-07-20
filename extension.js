@@ -13,6 +13,7 @@ import Clutter from 'gi://Clutter';
 import St from 'gi://St';
 import GObject from 'gi://GObject';
 import Gio from 'gi://Gio';
+import Shell from 'gi://Shell';
 
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -45,7 +46,6 @@ class MenuButton extends PanelMenu.Button {
     _init(me) {
         super._init(0.5, 'ColorblindMenu', false);
         this._settings = me.getSettings();
-        this._filterName = 'colorblind';
         this._getEffects();
 
         this._actionTime = 0;
@@ -53,6 +53,8 @@ class MenuButton extends PanelMenu.Button {
         this._activeData = null;
         this._filterStrength = 1;
         this._menuItems = [];
+
+        this._effectTarget = new EffectTarget();
 
         const bin = new St.BoxLayout();
         const panelLabel = new St.Label({ y_align: Clutter.ActorAlign.CENTER });
@@ -184,6 +186,7 @@ class MenuButton extends PanelMenu.Button {
             this._removeEffect();
             this._activeEffect = null;
             this._clearEffects();
+            this._effectTarget.destroy();
 
             if (this._labelTimeoutId)
                 GLib.source_remove(this._labelTimeoutId);
@@ -290,12 +293,12 @@ class MenuButton extends PanelMenu.Button {
     }
 
     _addEffect(effect) {
-        Main.uiGroup.add_effect_with_name(this._filterName, effect);
+        this._effectTarget.set_effect(effect);
         this._activeEffect = effect;
     }
 
     _removeEffect() {
-        Main.uiGroup.remove_effect_by_name(this._filterName);
+        this._effectTarget.set_effect(null);
     }
 
     _saveSettings() {
@@ -652,3 +655,86 @@ class MenuButton extends PanelMenu.Button {
         };
     }
 });
+
+// Always apply effects to a Clutter.Clone; see discussion in
+// https://gitlab.gnome.org/GNOME/mutter/-/merge_requests/2269
+class EffectTarget {
+    constructor() {
+        // the effect that's currently applied, if any
+        this._currentEffect = null;
+
+        // clone of uiGroup for cases when another clone (i.e. the screen
+        // magnifier) isn't already being displayed
+        this._uiGroupClone = new Clutter.Clone({
+            source: Main.uiGroup,
+            clip_to_allocation: true,
+        });
+        Shell.util_set_hidden_from_pick(this._uiGroupClone, true);
+
+        // Tracks both the magnifier's actor and the connection to its 'destroy'
+        // signal.
+        this._magnifier = null;
+
+        // The screen magnifier gets its content directly from uiGroup, not our
+        // filtered clone, and displays on top of uiGroup. To filter its
+        // content, we need to intentionally attach to it.
+        const global_stage = Shell.Global.get().stage;
+        this._stageAddConnId = global_stage.connect(
+            'child-added', (_stage, actor) => { this._on_stage_attach(actor); });
+        global_stage.get_children().forEach(child => this._on_stage_attach(child));
+    }
+
+    destroy() {
+        Shell.Global.get().stage.disconnect(this._stageAddConnId);
+        this.set_effect(null);
+        this._set_magnifier(null);
+        this._uiGroupClone.destroy();
+    }
+
+    set_effect(new_effect) {
+        if (new_effect === this._currentEffect) {
+            return;
+        }
+
+        const source = this._magnifier?.source ?? this._uiGroupClone;
+
+        if (this._currentEffect) {
+            source.remove_effect(this._currentEffect);
+        } else if (source === this._uiGroupClone) {
+            Shell.Global.get().stage.add_child(this._uiGroupClone);
+        }
+
+        this._currentEffect = new_effect;
+
+        if (this._currentEffect) {
+            source.add_effect(this._currentEffect);
+        } else if (source === this._uiGroupClone) {
+            Shell.Global.get().stage.remove_child(this._uiGroupClone);
+        }
+    }
+
+    _set_magnifier(magnifier) {
+        if (this._magnifier) {
+            const m = this._magnifier;
+            m.source.disconnect(m.destroy_conn);
+        }
+
+        const effect = this._currentEffect;
+        this.set_effect(null);
+
+        this._magnifier = magnifier;
+
+        this.set_effect(effect);
+    }
+
+    _on_stage_attach(source) {
+        if (!source.style_class?.split(' ').some(s => s === 'magnifier-zoom-region')) {
+            return;
+        }
+
+        const destroy_conn = source.connect('destroy', () => {
+            this._set_magnifier(null);
+        });
+        this._set_magnifier({ source, destroy_conn });
+    }
+}
