@@ -7,12 +7,13 @@
     "45",
     "46",
     "47",
-    "48"
+    "48",
+    "49"
   ],
   "url": "https://github.com/G-dH/gnome-colorblind-filters",
   "donations": {
     "buymeacoffee": "georgdh"
   },
   "uuid": "colorblind-filters@G-dH.github.com",
-  "version-name": "48.0"
+  "version-name": "49.0"
 }
