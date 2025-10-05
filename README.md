@@ -1,7 +1,7 @@
 # Colorblind Filters
 A GNOME Shell extension for main panel that offers full-screen color filters that should help color-blind users and developers.
 
-Supports GNOME Shell 3.36 - 48
+Supports GNOME Shell 3.36 - 49
 
 ## Screenshot
 ![Colorblind Filters menu](colorblind-filters.png)
