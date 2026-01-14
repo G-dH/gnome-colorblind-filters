@@ -104,6 +104,30 @@ class DaltonismEffect extends Clutter.ShaderEffect {
     }
 });
 
+export const RedEffect = GObject.registerClass(
+class RedEffect extends Clutter.ShaderEffect {
+    _init(properties) {
+        super._init();
+        this._source = ShaderLib.getRedMonochrome();
+        this.set_shader_source(this._source);
+    }
+
+    // No updateEffect needed if there are no adjustable sliders,
+    // but we keep the structure consistent.
+    updateEffect(properties) {
+        this.queue_repaint();
+    }
+
+    vfunc_get_static_shader_source() {
+        return this._source;
+    }
+
+    vfunc_paint_target(...args) {
+        this.set_uniform_value('tex', 0);
+        super.vfunc_paint_target(...args);
+    }
+});
+
 export const ShaderLib = class {
     static getDaltonism() {
         return `
@@ -289,6 +313,23 @@ export const ShaderLib = class {
                 c.rgb = pow(c.rgb, vec3(1.0/gamma));
 
                 cogl_color_out = c;
+            }
+        `;
+    }
+
+    static getRedMonochrome() {
+        return `
+            uniform sampler2D tex;
+
+            void main() {
+                vec4 c = texture2D(tex, cogl_tex_coord_in[0].st);
+
+                // Calculate brightness using user's custom weights:
+                // 30% Red, 60% Green, 10% Blue
+                float brightness = (0.3 * c.r) + (0.6 * c.g) + (0.1 * c.b);
+
+                // Output: Red = brightness, Green = 0, Blue = 0, Alpha = original
+                cogl_color_out = vec4(brightness, 0.0, 0.0, c.a);
             }
         `;
     }
