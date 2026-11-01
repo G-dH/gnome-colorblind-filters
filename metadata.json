@@ -4,7 +4,6 @@
   "name": "Colorblind Filters",
   "settings-schema": "org.gnome.shell.extensions.colorblind-filters",
   "shell-version": [
-    "45",
     "46",
     "47",
     "48",
