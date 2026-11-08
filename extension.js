@@ -2,6 +2,15 @@
  * ColorBlind Filters
  * extension.js
  *
+ * Ported to GNOME Shell 51:
+ *  - PanelMenu.Button no longer overrides vfunc_event; it opens its menu on
+ *    any button press via an internal Clutter.ClickGesture. Per-button
+ *    behavior is implemented here with Clutter event controllers
+ *    (Clutter.ClickGesture / Clutter.ScrollController), the recommended
+ *    replacement for vfunc_event in GNOME 51.
+ *  - vfunc_event() has been removed and replaced by controller callbacks.
+ *  - Shader effects are now snippet based (see shaders.js).
+ *
  * @author     GdH <G-dH@github.com>
  * @copyright  2022-2024
  * @license    GPL-3.0
@@ -182,6 +191,9 @@ class MenuButton extends PanelMenu.Button {
         this._setShaderEffect();
 
         strengthSlider.connect('notify::value', this._switchFilter.bind(this, strengthSlider));
+
+        this._addEventControllers();
+
         this.connect('destroy', () => {
             this._removeEffect();
             this._activeEffect = null;
@@ -197,6 +209,101 @@ class MenuButton extends PanelMenu.Button {
             }
             this._settings = null;
         });
+    }
+
+    // GNOME 51: vfunc_event() was replaced by event controllers.
+    // PanelMenu.Button now installs its own Clutter.ClickGesture that opens
+    // the popup menu on any button press; we need per-button behavior, so
+    // that gesture is disabled and separate controllers are added instead.
+    _addEventControllers() {
+        this._clickGesture.set_enabled(false);
+
+        // primary button toggles active filter on/off
+        const primaryClick = new Clutter.ClickGesture();
+        primaryClick.set_recognize_on_press(true);
+        primaryClick.set_required_button(Clutter.BUTTON_PRIMARY);
+        primaryClick.connect('recognize', () => this._onPrimaryClick());
+        this.add_action(primaryClick);
+
+        // middle clicking on panel btn switches between normal correction,
+        // high contrast and off state for the active cb type
+        const middleClick = new Clutter.ClickGesture();
+        middleClick.set_recognize_on_press(true);
+        middleClick.set_required_button(Clutter.BUTTON_MIDDLE);
+        middleClick.connect('recognize', () => this._onMiddleClick());
+        this.add_action(middleClick);
+
+        // secondary button (and keyboard menu key) opens the popup menu
+        const secondaryClick = new Clutter.ClickGesture();
+        secondaryClick.set_recognize_on_press(true);
+        secondaryClick.set_required_button(Clutter.BUTTON_SECONDARY);
+        secondaryClick.connect('recognize', () => this._onSecondaryClick());
+        this.add_action(secondaryClick);
+
+        // scrolling over panel btn switches between all cb correction
+        // filters except inversions
+        const scrollController = new Clutter.ScrollController({
+            flags: Clutter.ScrollControllerFlags.DISCRETE |
+                Clutter.ScrollControllerFlags.SCROLL_VERTICAL,
+        });
+        scrollController.connect('scroll',
+            (controller, sprite, source, dx, dy) => this._onScroll(dy));
+        this.add_action(scrollController);
+    }
+
+    _onPrimaryClick() {
+        this._switch.state = !this._switch.state;
+        this._switchToggled();
+    }
+
+    _onMiddleClick() {
+        if (!this._switch.state)
+            return;
+
+        const effectName = this._activeData.name;
+        let item;
+
+        switch (effectName) {
+        case 'ProtanCorrection':
+            item = this._getItemByName('ProtanCorrectionHighContrast');
+            break;
+        case 'ProtanCorrectionHighContrast':
+            item = this._getItemByName('ProtanCorrection');
+            break;
+        case 'DeuterCorrection':
+            item = this._getItemByName('DeuterCorrectionHighContrast');
+            break;
+        case 'DeuterCorrectionHighContrast':
+            item = this._getItemByName('DeuterCorrection');
+            break;
+        }
+
+        if (item)
+            this._switchFilter(item);
+
+        this._setPanelLabel();
+    }
+
+    _onSecondaryClick() {
+        this.menu.toggle();
+        this._correctionsExpander.setSubmenuShown(true);
+    }
+
+    _onScroll(dy) {
+        // limit the rate at which scrolling switches filters
+        if (!this._switch.state || !this._activeItem ||
+            (Date.now() - this._actionTime) <= 200)
+            return;
+
+        this._actionTime = Date.now();
+
+        // scroll up -> previous filter, scroll down -> next filter
+        const step = dy < 0 ? -1 : 1;
+        const length = this._menuItems.length;
+        const index = (this._menuItems.indexOf(this._activeItem) + step + length) % length;
+        const item = this._menuItems[index];
+        this._switchFilter(item);
+        this._setPanelLabel(item);
     }
 
     _switchToggled() {
@@ -351,70 +458,6 @@ class MenuButton extends PanelMenu.Button {
                 return item;
         }
         return null;
-    }
-
-    vfunc_event(event) {
-        if (event.type() === Clutter.EventType.BUTTON_RELEASE)
-            return Clutter.EVENT_PROPAGATE;
-
-        // scrolling over panel btn switches between all cb correction filters except inversions
-        if (this._switch.state && event.type() === Clutter.EventType.SCROLL && (Date.now() - this._actionTime) > 200) {
-            const direction = event.get_scroll_direction();
-
-            if (direction === Clutter.ScrollDirection.SMOOTH)
-                return Clutter.EVENT_STOP;
-
-
-            const step = direction === Clutter.ScrollDirection.UP ? 10 : 1;
-            const index = (this._menuItems.indexOf(this._activeItem) + step) % 11;
-            const item = this._menuItems[index];
-            this._switchFilter(item);
-            this._setPanelLabel(item);
-
-            return Clutter.EVENT_STOP;
-        }
-
-        if (event.type() === Clutter.EventType.BUTTON_PRESS && (event.get_button() === Clutter.BUTTON_PRIMARY || event.get_button() === Clutter.BUTTON_MIDDLE)) {
-            // primary button toggles active filter on/off
-            if (event.get_button() === Clutter.BUTTON_PRIMARY) {
-                this._switch.state = !this._switch.state;
-                // this._setShaderEffect();
-                this._switchToggled();
-                return Clutter.EVENT_STOP;
-            } else if (this._switch.state && event.get_button() === Clutter.BUTTON_MIDDLE) {
-                // middle clicking on panel btn switches between normal correction, high contrast and off state for the active cb type
-                let item;
-                const effectName = this._activeData.name;
-
-                switch (effectName) {
-                case 'ProtanCorrection':
-                    item = this._getItemByName('ProtanCorrectionHighContrast');
-                    break;
-                case 'ProtanCorrectionHighContrast':
-                    item = this._getItemByName('ProtanCorrection');
-                    break;
-                case 'DeuterCorrection':
-                    item = this._getItemByName('DeuterCorrectionHighContrast');
-                    break;
-                case 'DeuterCorrectionHighContrast':
-                    item = this._getItemByName('DeuterCorrection');
-                    break;
-                }
-
-                if (item)
-                    this._switchFilter(item);
-
-
-                this._setPanelLabel();
-                return Clutter.EVENT_STOP;
-            }
-        } else if (event.type() === Clutter.EventType.TOUCH_BEGIN || (event.type() === Clutter.EventType.BUTTON_PRESS && event.get_button() === Clutter.BUTTON_SECONDARY)) {
-            this.menu.toggle();
-            this._correctionsExpander.setSubmenuShown(true);
-            return Clutter.EVENT_STOP;
-        }
-
-        return Clutter.EVENT_PROPAGATE;
     }
 
     _setPanelLabel(item) {
